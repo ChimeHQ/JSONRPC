@@ -12,7 +12,7 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
-    - name: xcodebuild for ${{ matrix.destination }}
-      run: set -o pipefail && xcodebuild test -scheme OperationPlus -destination "${{ matrix.destination }}" | xcpretty
-    - name: SPM
+    - name: xcodebuild ${{ matrix.destination }}
+      run: set -o pipefail && xcodebuild test -scheme JSONRPC -destination "${{ matrix.destination }}" | xcpretty
+    - name: SPM ${{ matrix.destination }}
       run: swift test
