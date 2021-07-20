@@ -8,27 +8,6 @@
 import XCTest
 @testable import JSONRPC
 
-protocol ProtocolEncodable: Encodable {
-}
-
-extension ProtocolEncodable {
-    func encodeToProtocolData() throws -> Data {
-        let payloadData = try JSONEncoder().encode(self)
-
-        return MessageTransport.prependHeaders(to: payloadData)
-    }
-}
-
-extension JSONRPCResponse: ProtocolEncodable {
-}
-
-extension JSONRPCNotification: ProtocolEncodable {
-}
-
-extension JSONRPCRequest: ProtocolEncodable {
-}
-
-
 class ProtocolTransportTests: XCTestCase {
     typealias TestResult = Result<JSONRPCResponse<String>, Error>
 
