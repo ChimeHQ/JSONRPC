@@ -34,6 +34,7 @@
 
 /* Begin PBXFileReference section */
 		C906E33126A5D6B300D0B629 /* ProtocolTransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolTransportTests.swift; sourceTree = "<group>"; };
+		C9199FB826A723D600309CCF /* JSONRPCTests.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = JSONRPCTests.xcconfig; sourceTree = "<group>"; };
 		C92F00F926A5D52800CEB864 /* DataTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataTransport.swift; sourceTree = "<group>"; };
 		C92F00FB26A5D57F00CEB864 /* MessageTransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageTransportTests.swift; sourceTree = "<group>"; };
 		C92F00FD26A5D5A500CEB864 /* MockDataTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDataTransport.swift; sourceTree = "<group>"; };
@@ -115,6 +116,7 @@
 				C92F00FB26A5D57F00CEB864 /* MessageTransportTests.swift */,
 				C92F00FD26A5D5A500CEB864 /* MockDataTransport.swift */,
 				C906E33126A5D6B300D0B629 /* ProtocolTransportTests.swift */,
+				C9199FB826A723D600309CCF /* JSONRPCTests.xcconfig */,
 			);
 			path = JSONRPCTests;
 			sourceTree = "<group>";
@@ -439,6 +441,7 @@
 		};
 		C9704CFC2698A67E00CC58D5 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C9199FB826A723D600309CCF /* JSONRPCTests.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
@@ -457,6 +460,7 @@
 		};
 		C9704CFD2698A67E00CC58D5 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C9199FB826A723D600309CCF /* JSONRPCTests.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
