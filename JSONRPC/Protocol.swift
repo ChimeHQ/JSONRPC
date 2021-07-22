@@ -85,23 +85,3 @@ extension JSONRPCResponse: Hashable where T: Hashable {
 }
 
 public typealias AnyJSONRPCResponse = JSONRPCResponse<AnyCodable>
-
-public protocol ProtocolEncodable: Encodable {
-}
-
-public extension ProtocolEncodable {
-    func encodeToProtocolData() throws -> Data {
-        let payloadData = try JSONEncoder().encode(self)
-
-        return MessageTransport.prependHeaders(to: payloadData)
-    }
-}
-
-extension JSONRPCResponse: ProtocolEncodable {
-}
-
-extension JSONRPCNotification: ProtocolEncodable {
-}
-
-extension JSONRPCRequest: ProtocolEncodable {
-}

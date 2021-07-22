@@ -131,17 +131,6 @@ public class MessageTransport {
 
         return (key, value, endOfHeader)
     }
-
-    public static func prependHeaders(to data: Data) -> Data {
-        let length = data.count
-
-        let header = "Content-Length: \(length)\r\n\r\n"
-        guard let headerData = header.data(using: .utf8) else {
-            fatalError()
-        }
-
-        return headerData + data
-    }
 }
 
 extension MessageTransport: DataTransport {
@@ -157,5 +146,36 @@ extension MessageTransport: DataTransport {
 
     public func close() {
         dataTransport.close()
+    }
+}
+
+extension MessageTransport {
+    public static func prependHeaders(to data: Data) -> Data {
+        let length = data.count
+
+        let header = "Content-Length: \(length)\r\n\r\n"
+        guard let headerData = header.data(using: .utf8) else {
+            fatalError()
+        }
+
+        return headerData + data
+    }
+
+    public static func encode<T: Codable>(_ notification: JSONRPCNotification<T>) throws -> Data {
+        let payloadData = try JSONEncoder().encode(notification)
+
+        return MessageTransport.prependHeaders(to: payloadData)
+    }
+
+    public static func encode<T: Codable>(_ response: JSONRPCResponse<T>) throws -> Data {
+        let payloadData = try JSONEncoder().encode(response)
+
+        return MessageTransport.prependHeaders(to: payloadData)
+    }
+
+    public static func encode<T: Codable>(_ request: JSONRPCRequest<T>) throws -> Data {
+        let payloadData = try JSONEncoder().encode(request)
+
+        return MessageTransport.prependHeaders(to: payloadData)
     }
 }

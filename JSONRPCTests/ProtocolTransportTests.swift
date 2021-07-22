@@ -11,7 +11,7 @@ import JSONRPC
 class ProtocolTransportTests: XCTestCase {
     typealias TestResult = Result<JSONRPCResponse<String>, Error>
 
-    func testSendRequest() {
+    func testSendRequest() throws {
         let dataTransport = MockDataTransport()
         let messageTransport = MessageTransport(dataTransport: dataTransport)
         let transport = ProtocolTransport(messageTransport: messageTransport)
@@ -27,14 +27,14 @@ class ProtocolTransportTests: XCTestCase {
         }
 
         let response = JSONRPCResponse<String>(id: JSONId(1), result: "goodbye")
-        let responseData = try! response.encodeToProtocolData()
+        let responseData = try MessageTransport.encode(response)
 
         dataTransport.mockRead(responseData)
 
         wait(for: [expectation], timeout: 1.0)
     }
 
-    func testManySendRequestsWithResponsesDeliveredOnABackgroundQueueTest() {
+    func testManySendRequestsWithResponsesDeliveredOnABackgroundQueueTest() throws {
         let dataTransport = MockDataTransport()
         let messageTransport = MessageTransport(dataTransport: dataTransport)
         let transport = ProtocolTransport(messageTransport: messageTransport)
@@ -58,7 +58,7 @@ class ProtocolTransportTests: XCTestCase {
             }
 
             let response = JSONRPCResponse<String>(id: JSONId(i), result: responseParam)
-            let responseData = try! response.encodeToProtocolData()
+            let responseData = try MessageTransport.encode(response)
 
             // this must happen asynchronously to match the behavior of NSFileHandle
             queue.async {
@@ -86,7 +86,7 @@ class ProtocolTransportTests: XCTestCase {
         wait(for: [expectation], timeout: 1.0)
 
         let result = JSONRPCNotification(method: "mynotification", params: params)
-        let resultData = try result.encodeToProtocolData()
+        let resultData = try MessageTransport.encode(result)
 
         XCTAssertEqual(dataTransport.writtenData, [resultData])
     }
@@ -110,7 +110,7 @@ class ProtocolTransportTests: XCTestCase {
         }
 
         let response = JSONRPCNotification<String>(method: "iamnotification", params: "iamstring")
-        let responseData = try response.encodeToProtocolData()
+        let responseData = try MessageTransport.encode(response)
 
         dataTransport.mockRead(responseData)
 
