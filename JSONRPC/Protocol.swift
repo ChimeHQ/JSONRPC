@@ -30,6 +30,11 @@ public struct JSONRPCNotification<T>: Codable where T: Codable {
     public var jsonrpc = "2.0"
     public var method: String
     public var params: T?
+
+    public init(method: String, params: T? = nil) {
+        self.method = method
+        self.params = params
+    }
 }
 
 extension JSONRPCNotification: Equatable where T: Equatable {
@@ -84,8 +89,8 @@ public typealias AnyJSONRPCResponse = JSONRPCResponse<AnyCodable>
 public protocol ProtocolEncodable: Encodable {
 }
 
-extension ProtocolEncodable {
-    public func encodeToProtocolData() throws -> Data {
+public extension ProtocolEncodable {
+    func encodeToProtocolData() throws -> Data {
         let payloadData = try JSONEncoder().encode(self)
 
         return MessageTransport.prependHeaders(to: payloadData)

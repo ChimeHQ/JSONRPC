@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import JSONRPC
+import JSONRPC
 
 class ProtocolTransportTests: XCTestCase {
     typealias TestResult = Result<JSONRPCResponse<String>, Error>
