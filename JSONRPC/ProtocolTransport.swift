@@ -2,6 +2,7 @@ import Foundation
 import os.log
 
 public enum ProtocolTransportError: Error {
+    case undecodableMesssage(Data)
     case unexpectedResponse(AnyJSONRPCResponse)
 }
 
@@ -17,7 +18,7 @@ public class ProtocolTransport {
     private let decoder: JSONDecoder
     private var responders: [String: MessageResponder]
 
-    public var responseHandler: ((AnyJSONRPCRequest, Data, @escaping (AnyJSONRPCResponse) -> Void) -> Void)?
+    public var requestHandler: ((AnyJSONRPCRequest, Data, @escaping (AnyJSONRPCResponse) -> Void) -> Void)?
     public var notificationHandler: ((AnyJSONRPCNotification, Data, @escaping (Error?) -> Void) -> Void)?
     public var errorHandler: ((Error) -> Void)?
     private let messageTransport: MessageTransport
@@ -94,34 +95,25 @@ extension ProtocolTransport {
     private func encodeAndWrite<T>(_ value: T) throws where T: Codable {
         let data = try self.encoder.encode(value)
 
+        if logMessages, let string = String(data: data, encoding: .utf8) {
+            if #available(OSX 10.12, *), let log = self.log {
+                os_log("sending: %{public}@", log: log, type: .debug, string)
+            }
+        }
+
         try self.write(data)
     }
 
     public func dataAvailable(_ data: Data) {
         if logMessages, let string = String(data: data, encoding: .utf8) {
             if #available(OSX 10.12, *), let log = self.log {
-                os_log("raw message data %{public}@", log: log, type: .debug, string)
+                os_log("received: %{public}@", log: log, type: .debug, string)
             }
         }
 
         queue.async {
-            // It is important we check for AnyJSONRPCResponse first, as AnyJSONRPCNotification can
-            // succesfully decode otherwise
-
-            if let msg = try? self.decoder.decode(AnyJSONRPCResponse.self, from: data) {
-                self.dispatchResponse(msg, originalData: data)
-                return
-            }
-
-            if let note = try? self.decoder.decode(AnyJSONRPCNotification.self, from: data) {
-                self.dispatchNotification(note, originalData: data)
-                return
-            }
-
             do {
-                let request = try self.decoder.decode(AnyJSONRPCRequest.self, from: data)
-
-                self.dispatchRequest(request, originalData: data)
+                try self.decodeAndDispatch(data: data)
             } catch {
                 if #available(OSX 10.12, *), let log = self.log {
                     let string = String(data: data, encoding: .utf8) ?? ""
@@ -134,25 +126,43 @@ extension ProtocolTransport {
         }
     }
 
-    private func dispatchRequest(_ request: AnyJSONRPCRequest, originalData: Data) {
+    private func decodeAndDispatch(data: Data) throws {
+        // Decoding correctly is a challange. The message forms have a lot of optional attributes, which
+        // makes them indistinguishable from Codable's perspective. The solution I came up with is to
+        // decode a generic "message" type, and then inspect the non-null properties to determine the actual
+        // message struct.
+
+        let msg = try decoder.decode(JSONRPCMessage.self, from: data)
+
+        switch msg.kind {
+        case .invalid:
+            throw ProtocolTransportError.undecodableMesssage(data)
+        case .notification:
+            let note = try decoder.decode(AnyJSONRPCNotification.self, from: data)
+
+            dispatchNotification(note, originalData: data)
+        case .response:
+            let rsp = try decoder.decode(AnyJSONRPCResponse.self, from: data)
+
+            try dispatchResponse(rsp, originalData: data)
+        case .request:
+            let request = try decoder.decode(AnyJSONRPCRequest.self, from: data)
+
+            try dispatchRequest(request, originalData: data)
+        }
+    }
+
+    private func dispatchRequest(_ request: AnyJSONRPCRequest, originalData: Data) throws {
         if #available(macOS 10.12, iOS 10.0, tvOS 10.0, watchOS 3.0, *) {
             dispatchPrecondition(condition: .onQueue(queue))
         }
 
-        guard let handler = responseHandler else {
-            do {
-                let failure = AnyJSONRPCResponse(id: request.id, errorCode: JSONRPCErrors.internalError, message: "No response handler installed")
+        guard let handler = requestHandler else {
+            let failure = AnyJSONRPCResponse(id: request.id,
+                                             errorCode: JSONRPCErrors.internalError,
+                                             message: "No response handler installed")
 
-                try self.encodeAndWrite(failure)
-            } catch {
-                if #available(OSX 10.12, *), let log = self.log {
-                    let string = String(data: originalData, encoding: .utf8) ?? ""
-
-                    os_log("failed to dispatch request: %{public}@, %{public}@", log: log, type: .error, error.localizedDescription, string)
-                }
-
-                self.errorHandler?(error)
-            }
+            try self.encodeAndWrite(failure)
 
             return
         }
@@ -193,7 +203,7 @@ extension ProtocolTransport {
         }
     }
 
-    private func dispatchResponse(_ message: AnyJSONRPCResponse, originalData data: Data) {
+    private func dispatchResponse(_ message: AnyJSONRPCResponse, originalData data: Data) throws {
         if #available(macOS 10.12, iOS 10.0, tvOS 10.0, watchOS 3.0, *) {
             dispatchPrecondition(condition: .onQueue(queue))
         }
@@ -201,12 +211,7 @@ extension ProtocolTransport {
         let key = message.id.description
 
         guard let responder = responders[key] else {
-            if #available(OSX 10.12, *), let log = self.log {
-                os_log("no matching responder for id %{public}@", log: log, type: .error, key)
-            }
-
-            errorHandler?(ProtocolTransportError.unexpectedResponse(message))
-            return
+            throw ProtocolTransportError.unexpectedResponse(message)
         }
 
         responder(.success(data))

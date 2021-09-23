@@ -11,9 +11,10 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/Flight-School/AnyCodable", from: "0.6.0"),
+        .package(url: "https://github.com/g-mark/NullCodable", from: "1.1.0"),
     ],
     targets: [
-        .target(name: "JSONRPC", dependencies: ["AnyCodable"], path: "JSONRPC/"),
+        .target(name: "JSONRPC", dependencies: ["AnyCodable", "NullCodable"], path: "JSONRPC/"),
         .testTarget(name: "JSONRPCTests", dependencies: ["JSONRPC"], path: "JSONRPCTests/"),
     ]
 )

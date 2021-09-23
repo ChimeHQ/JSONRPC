@@ -1,5 +1,46 @@
 import Foundation
 import AnyCodable
+import NullCodable
+
+public struct JSONRPCMessage: Codable {
+    public enum Kind {
+        case invalid
+        case notification
+        case request
+        case response
+    }
+
+    public var jsonrpc: String
+    public var id: JSONId?
+    public var method: String?
+    public var params: AnyCodable?
+
+    @NullCodable
+    public var result: AnyCodable?
+    public var error: AnyJSONRPCResponseError?
+
+    public var kind: Kind {
+        if jsonrpc != "2.0" {
+            return .invalid
+        }
+
+        let hasId = id != nil
+        let hasMethod = method != nil
+        let hasResultOrError = result != nil || error != nil
+        let hasParams = params != nil
+
+        switch (hasId, hasMethod, hasResultOrError, hasParams) {
+        case (false, true, false, _):
+            return .notification
+        case (true, false, true, false):
+            return .response
+        case (true, true, false, _):
+            return .request
+        default:
+            return .invalid
+        }
+    }
+}
 
 public struct JSONRPCRequest<T>: Codable where T: Codable {
     public var jsonrpc = "2.0"
@@ -62,10 +103,12 @@ public typealias AnyJSONRPCResponseError = JSONRPCResponseError<AnyCodable>
 public struct JSONRPCResponse<T>: Codable where T: Codable {
     public var jsonrpc: String
     public var id: JSONId
+
+    @NullCodable
     public var result: T?
     public var error: AnyJSONRPCResponseError?
 
-    public init(id: JSONId, result: T) {
+    public init(id: JSONId, result: T?) {
         self.jsonrpc = "2.0"
         self.id = id
         self.result = result
@@ -82,6 +125,12 @@ extension JSONRPCResponse: Equatable where T: Equatable {
 }
 
 extension JSONRPCResponse: Hashable where T: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(jsonrpc)
+        hasher.combine(id)
+        hasher.combine(result)
+        hasher.combine(error)
+    }
 }
 
 public typealias AnyJSONRPCResponse = JSONRPCResponse<AnyCodable>
