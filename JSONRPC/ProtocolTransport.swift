@@ -68,7 +68,7 @@ extension ProtocolTransport  {
         }
     }
 
-    public func sendNotification<T>(_ params: T, method: String, completionHandler: @escaping (Error?) -> Void = {_ in }) where T: Codable {
+    public func sendNotification<T>(_ params: T?, method: String, completionHandler: @escaping (Error?) -> Void = {_ in }) where T: Codable {
         let notification = JSONRPCNotification(method: method, params: params)
 
         queue.async {
