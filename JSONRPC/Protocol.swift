@@ -117,7 +117,13 @@ public struct JSONRPCResponse<T>: Codable where T: Codable {
     public init(id: JSONId, errorCode: Int, message: String) {
         self.jsonrpc = "2.0"
         self.id = id
-        self.error = AnyJSONRPCResponseError(code: JSONRPCErrors.internalError, message: "No response handler installed", data: nil)
+        self.error = AnyJSONRPCResponseError(code: JSONRPCErrors.internalError, message: message, data: nil)
+    }
+
+    public init(id: JSONId, error: Error) {
+        self.init(id: id,
+                  errorCode: JSONRPCErrors.internalError,
+                  message: error.localizedDescription)
     }
 }
 
