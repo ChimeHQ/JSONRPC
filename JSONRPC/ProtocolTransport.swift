@@ -4,6 +4,7 @@ import os.log
 public enum ProtocolTransportError: Error {
     case undecodableMesssage(Data)
     case unexpectedResponse(AnyJSONRPCResponse)
+    case abandonedRequest
 }
 
 public class ProtocolTransport {
@@ -41,6 +42,12 @@ public class ProtocolTransport {
 
         self.messageTransport.dataHandler = { [unowned self] (data) in
             self.dataAvailable(data)
+        }
+    }
+
+    deinit {
+        for (_, responder) in responders {
+            responder(.failure(ProtocolTransportError.abandonedRequest))
         }
     }
 }
