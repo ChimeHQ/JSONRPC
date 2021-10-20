@@ -32,7 +32,7 @@ public struct JSONRPCMessage: Codable {
         switch (hasId, hasMethod, hasResultOrError, hasParams) {
         case (false, true, false, _):
             return .notification
-        case (true, false, true, false):
+        case (true, false, _, false):
             return .response
         case (true, true, false, _):
             return .request

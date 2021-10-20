@@ -9,7 +9,8 @@ import XCTest
 import JSONRPC
 
 class ProtocolTransportTests: XCTestCase {
-    typealias TestResult = Result<JSONRPCResponse<String>, Error>
+    typealias TestResponse = JSONRPCResponse<String>
+    typealias TestResult = Result<TestResponse, Error>
 
     func testSendRequest() throws {
         let dataTransport = MockDataTransport()
@@ -26,7 +27,7 @@ class ProtocolTransportTests: XCTestCase {
             expectation.fulfill()
         }
 
-        let response = JSONRPCResponse<String>(id: JSONId(1), result: "goodbye")
+        let response = TestResponse(id: JSONId(1), result: "goodbye")
         let responseData = try MessageTransport.encode(response)
 
         dataTransport.mockRead(responseData)
@@ -57,7 +58,7 @@ class ProtocolTransportTests: XCTestCase {
                 expectation.fulfill()
             }
 
-            let response = JSONRPCResponse<String>(id: JSONId(i), result: responseParam)
+            let response = TestResponse(id: JSONId(i), result: responseParam)
             let responseData = try MessageTransport.encode(response)
 
             // this must happen asynchronously to match the behavior of NSFileHandle
@@ -113,6 +114,58 @@ class ProtocolTransportTests: XCTestCase {
         let responseData = try MessageTransport.encode(response)
 
         dataTransport.mockRead(responseData)
+
+        wait(for: [expectation], timeout: 1.0)
+    }
+
+    func testNullResultResponse() throws {
+        let dataTransport = MockDataTransport()
+        let messageTransport = MessageTransport(dataTransport: dataTransport)
+        let transport = ProtocolTransport(messageTransport: messageTransport)
+
+        let expectation = XCTestExpectation(description: "Response Message")
+
+        let params = "hello"
+        transport.sendRequest(params, method: "mymethod") { (result: Result<TestResponse, Error>) in
+            guard let response = try? result.get() else {
+                XCTFail()
+                return
+            }
+
+            XCTAssertNil(response.result)
+
+            expectation.fulfill()
+        }
+
+        let response = TestResponse(id: JSONId(1), result: nil)
+        let responseData = try MessageTransport.encode(response)
+
+        dataTransport.mockRead(responseData)
+
+        wait(for: [expectation], timeout: 1.0)
+    }
+
+    func testDeallocInvokesAbandondedHandlers() {
+        let expectation = XCTestExpectation(description: "Response Message")
+
+        DispatchQueue.global().async {
+            let dataTransport = MockDataTransport()
+            let messageTransport = MessageTransport(dataTransport: dataTransport)
+            let transport = ProtocolTransport(messageTransport: messageTransport)
+
+            let params = "hello"
+            transport.sendRequest(params, method: "mymethod") { (result: Result<TestResponse, Error>) in
+                switch result {
+                case .success:
+                    XCTFail()
+                case .failure(let error):
+                    print("failed with \(error)")
+                    
+                    expectation.fulfill()
+                }
+            }
+
+        }
 
         wait(for: [expectation], timeout: 1.0)
     }

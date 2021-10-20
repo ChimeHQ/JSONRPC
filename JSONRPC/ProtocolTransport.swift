@@ -5,6 +5,7 @@ public enum ProtocolTransportError: Error {
     case undecodableMesssage(Data)
     case unexpectedResponse(AnyJSONRPCResponse)
     case abandonedRequest
+    case dataStreamClosed
 }
 
 public class ProtocolTransport {
@@ -47,7 +48,7 @@ public class ProtocolTransport {
 
     deinit {
         for (_, responder) in responders {
-            responder(.failure(ProtocolTransportError.abandonedRequest))
+            responder(.failure(ProtocolTransportError.dataStreamClosed))
         }
     }
 }
@@ -66,7 +67,12 @@ extension ProtocolTransport  {
 
                 precondition(self.responders[key] == nil)
 
-                self.responders[key] = { [unowned self] (result) in
+                self.responders[key] = { [weak self] (result) in
+                    guard let self = self else {
+                        responseHandler(.failure(ProtocolTransportError.abandonedRequest))
+                        return
+                    }
+
                     self.relayResponse(result: result, responseHandler: responseHandler)
                 }
             } catch {
