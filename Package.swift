@@ -14,7 +14,7 @@ let package = Package(
         .package(url: "https://github.com/g-mark/NullCodable", from: "1.1.0"),
     ],
     targets: [
-        .target(name: "JSONRPC", dependencies: ["AnyCodable", "NullCodable"], path: "JSONRPC/"),
-        .testTarget(name: "JSONRPCTests", dependencies: ["JSONRPC"], path: "JSONRPCTests/"),
+        .target(name: "JSONRPC", dependencies: ["AnyCodable", "NullCodable"]),
+        .testTarget(name: "JSONRPCTests", dependencies: ["JSONRPC"]),
     ]
 )
