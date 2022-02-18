@@ -5,7 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "JSONRPC",
-    platforms: [.macOS("10.10")],
+    platforms: [.macOS(.v10_10), .iOS(.v10), .tvOS(.v10), .watchOS(.v3)],
     products: [
         .library(name: "JSONRPC", targets: ["JSONRPC"]),
     ],

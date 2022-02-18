@@ -12,6 +12,25 @@ dependencies: [
 ]
 ```
 
+## Classes
+
+### ProtocolTransport
+
+This is the core class for using the protocol. It supports sending and receiving generic messages and notifications, as well as responding to protocol-level errors.
+
+```swift
+public var requestHandler: ((AnyJSONRPCRequest, Data, @escaping (AnyJSONRPCResponse) -> Void) -> Void)?
+public var notificationHandler: ((AnyJSONRPCNotification, Data, @escaping (Error?) -> Void) -> Void)?
+public var errorHandler: ((Error) -> Void)?
+
+public func sendRequest<T, U>(_ params: T, method: String, responseHandler: @escaping (ResponseResult<U>) -> Void) where T: Codable, U: Decodable
+public func sendNotification<T>(_ params: T?, method: String, completionHandler: @escaping (Error?) -> Void = {_ in }) where T: Codable
+```
+
+### StdioDataTransport
+
+This is a concrete implemenation of the `DataTransport` protocol, which passes data across stdio. 
+
 ### Suggestions or Feedback
 
 We'd love to hear from you! Get in touch via [twitter](https://twitter.com/chimehq), an issue, or a pull request.
