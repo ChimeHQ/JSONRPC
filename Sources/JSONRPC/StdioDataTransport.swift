@@ -8,7 +8,7 @@ public class StdioDataTransport: DataTransport {
     var readHandler: ReadHandler?
     private var closed: Bool
     private var queue: DispatchQueue
-    private let log: OSLog?
+    private let log: OSLog
 
     public init() {
         self.stdinPipe = Pipe()
@@ -17,11 +17,7 @@ public class StdioDataTransport: DataTransport {
         self.readHandler = nil
         self.closed = false
         self.queue = DispatchQueue(label: "com.chimehq.JSONRPC.StdioDataTransport")
-        if #available(OSX 10.12, *) {
-            self.log = OSLog(subsystem: "com.chimehq.JSONRPC", category: "StdioDataTransport")
-        } else {
-            self.log = nil
-        }
+        self.log = OSLog(subsystem: "com.chimehq.JSONRPC", category: "StdioDataTransport")
 
         setupFileHandleHandlers()
     }
@@ -100,11 +96,7 @@ public class StdioDataTransport: DataTransport {
             // Just print for now. Perhaps provide a way to hook
             // this up to a caller?
             if let string = String(bytes: data, encoding: .utf8) {
-                if #available(OSX 10.12, *), let log = self.log {
-                    os_log("stderr: %{public}@", log: log, type: .error, string)
-                } else {
-                    print("stderr: \(string)")
-                }
+                os_log("stderr: %{public}@", log: log, type: .error, string)
             }
         }
     }
