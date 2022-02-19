@@ -1,3 +1,7 @@
+[![Github CI](https://github.com/ChimeHQ/JSONRPC/workflows/CI/badge.svg)](https://github.com/ChimeHQ/JSONRPC/actions)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FChimeHQ%2FJSONRPC%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/ChimeHQ/JSONRPC)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FChimeHQ%2FJSONRPC%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/ChimeHQ/JSONRPC)
+
 # JSONRPC
 
 There are already a bunch of packages out there for doing JSON-RPC in Swift. This one is just very simple and makes no assumptions about the transport stream type.
