@@ -1,5 +1,7 @@
 import Foundation
+#if !os(Linux)
 import os.log
+#endif
 
 public class StdioDataTransport: DataTransport {
     public let stdinPipe: Pipe
@@ -8,7 +10,9 @@ public class StdioDataTransport: DataTransport {
     var readHandler: ReadHandler?
     private var closed: Bool
     private var queue: DispatchQueue
+    #if !os(Linux)
     private let log: OSLog
+    #endif
 
     public init() {
         self.stdinPipe = Pipe()
@@ -17,7 +21,9 @@ public class StdioDataTransport: DataTransport {
         self.readHandler = nil
         self.closed = false
         self.queue = DispatchQueue(label: "com.chimehq.JSONRPC.StdioDataTransport")
+        #if !os(Linux)
         self.log = OSLog(subsystem: "com.chimehq.JSONRPC", category: "StdioDataTransport")
+        #endif
 
         setupFileHandleHandlers()
     }
@@ -96,7 +102,11 @@ public class StdioDataTransport: DataTransport {
             // Just print for now. Perhaps provide a way to hook
             // this up to a caller?
             if let string = String(bytes: data, encoding: .utf8) {
+                #if os(Linux)
+                print("stderr: \(string)")
+                #else
                 os_log("stderr: %{public}@", log: log, type: .error, string)
+                #endif
             }
         }
     }
