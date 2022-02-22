@@ -105,7 +105,7 @@ public class StdioDataTransport: DataTransport {
                 #if os(Linux)
                 print("stderr: \(string)")
                 #else
-                os_log("stderr: %{public}@", log: log, type: .error, string)
+                os_log("stderr: %{public}@", log: self.log, type: .error, string)
                 #endif
             }
         }
