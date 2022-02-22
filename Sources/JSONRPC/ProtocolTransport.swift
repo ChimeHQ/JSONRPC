@@ -1,5 +1,7 @@
 import Foundation
+#if !os(Linux)
 import os.log
+#endif
 
 public enum ProtocolTransportError: Error {
     case undecodableMesssage(Data)
@@ -24,7 +26,9 @@ public class ProtocolTransport {
     public var notificationHandler: ((AnyJSONRPCNotification, Data, @escaping (Error?) -> Void) -> Void)?
     public var errorHandler: ((Error) -> Void)?
     private let messageTransport: MessageTransport
-    private let log: OSLog?
+    #if !os(Linux)
+    private let log: OSLog
+    #endif
     public var logMessages = false
 
     public init(messageTransport: MessageTransport) {
@@ -34,12 +38,9 @@ public class ProtocolTransport {
         self.encoder = JSONEncoder()
         self.decoder = JSONDecoder()
         self.responders = [:]
-
-        if #available(OSX 10.12, *) {
-            self.log = OSLog(subsystem: "com.chimehq.JSONRPC", category: "ProtocolTransport")
-        } else {
-            self.log = nil
-        }
+        #if !os(Linux)
+        self.log = OSLog(subsystem: "com.chimehq.JSONRPC", category: "ProtocolTransport")
+        #endif
 
         self.messageTransport.dataHandler = { [unowned self] (data) in
             self.dataAvailable(data)
@@ -109,9 +110,11 @@ extension ProtocolTransport {
         let data = try self.encoder.encode(value)
 
         if logMessages, let string = String(data: data, encoding: .utf8) {
-            if #available(OSX 10.12, *), let log = self.log {
-                os_log("sending: %{public}@", log: log, type: .debug, string)
-            }
+            #if os(Linux)
+            print("sending: \(string)")
+            #else
+            os_log("sending: %{public}@", log: log, type: .debug, string)
+            #endif
         }
 
         try self.write(data)
@@ -119,20 +122,24 @@ extension ProtocolTransport {
 
     public func dataAvailable(_ data: Data) {
         if logMessages, let string = String(data: data, encoding: .utf8) {
-            if #available(OSX 10.12, *), let log = self.log {
-                os_log("received: %{public}@", log: log, type: .debug, string)
-            }
+            #if os(Linux)
+            print("received: \(string)")
+            #else
+            os_log("received: %{public}@", log: log, type: .debug, string)
+            #endif
         }
 
         queue.async {
             do {
                 try self.decodeAndDispatch(data: data)
             } catch {
-                if #available(OSX 10.12, *), let log = self.log {
-                    let string = String(data: data, encoding: .utf8) ?? ""
+                let string = String(data: data, encoding: .utf8) ?? ""
 
-                    os_log("failed to decode data: %{public}@, %{public}@", log: log, type: .error, error.localizedDescription, string)
-                }
+                #if os(Linux)
+                print("failed to decode data: \(error), \(string)")
+                #else
+                os_log("failed to decode data: %{public}@, %{public}@", log: self.log, type: .error, String(describing: error), string)
+                #endif
 
                 self.errorHandler?(error)
             }
@@ -185,9 +192,11 @@ extension ProtocolTransport {
                 do {
                     try self.encodeAndWrite(result)
                 } catch {
-                    if #available(OSX 10.12, *), let log = self.log {
-                        os_log("dispatch handler failed: %{public}@", log: log, type: .error, error.localizedDescription)
-                    }
+                    #if os(Linux)
+                    print("dispatch handler failed: \(error)")
+                    #else
+                    os_log("dispatch handler failed: %{public}@", log: self.log, type: .error, String(describing: error))
+                    #endif
 
                     self.errorHandler?(error)
                 }
@@ -217,9 +226,7 @@ extension ProtocolTransport {
     }
 
     private func dispatchResponse(_ message: AnyJSONRPCResponse, originalData data: Data) throws {
-        if #available(macOS 10.12, iOS 10.0, tvOS 10.0, watchOS 3.0, *) {
-            dispatchPrecondition(condition: .onQueue(queue))
-        }
+        dispatchPrecondition(condition: .onQueue(queue))
 
         let key = message.id.description
 
@@ -235,9 +242,11 @@ extension ProtocolTransport {
     private func dispatchNotification(_ notification: AnyJSONRPCNotification, originalData data: Data) {
         notificationHandler?(notification, data, { (error) in
             if let error = error {
-                if #available(OSX 10.12, *), let log = self.log {
-                    os_log("notification handler failed: %{public}@", log: log, type: .error, error.localizedDescription)
-                }
+                #if os(Linux)
+                print("notification handler failed: \(error)")
+                #else
+                os_log("notification handler failed: %{public}@", log: self.log, type: .error, String(describing: error))
+                #endif
 
                 self.errorHandler?(error)
             }
