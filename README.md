@@ -1,6 +1,6 @@
-[![Github CI](https://github.com/ChimeHQ/JSONRPC/workflows/CI/badge.svg)](https://github.com/ChimeHQ/JSONRPC/actions)
-[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FChimeHQ%2FJSONRPC%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/ChimeHQ/JSONRPC)
-[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FChimeHQ%2FJSONRPC%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/ChimeHQ/JSONRPC)
+[![Build Status][build status badge]][build status]
+[![License][license badge]][license]
+[![Platforms][platforms badge]][platforms]
 
 # JSONRPC
 
@@ -40,3 +40,10 @@ This is a concrete implemenation of the `DataTransport` protocol, which passes d
 We'd love to hear from you! Get in touch via [twitter](https://twitter.com/chimehq), an issue, or a pull request.
 
 Please note that this project is released with a [Contributor Code of Conduct](CODE_OF_CONDUCT.md). By participating in this project you agree to abide by its terms.
+
+[build status]: https://github.com/ChimeHQ/JSONRPC/actions
+[build status badge]: https://github.com/ChimeHQ/JSONRPC/workflows/CI/badge.svg
+[license]: https://opensource.org/licenses/BSD-3-Clause
+[license badge]: https://img.shields.io/github/license/ChimeHQ/JSONRPC
+[platforms]: https://swiftpackageindex.com/ChimeHQ/JSONRPC
+[platforms badge]: https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FChimeHQ%2FJSONRPC%2Fbadge%3Ftype%3Dplatforms
