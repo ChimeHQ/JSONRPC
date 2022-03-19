@@ -1,45 +1,95 @@
 import Foundation
 import AnyCodable
-import NullCodable
 
-public struct JSONRPCMessage: Codable {
-    public enum Kind {
-        case invalid
-        case notification
-        case request
-        case response
+public enum JSONRPCProtocolError: Error {
+    case unsupportedVersion(String)
+    case malformedMessage
+}
+
+public enum JSONRPCMessage {
+    case notification(String, AnyCodable)
+    case request(JSONId, String, AnyCodable?)
+    case response(JSONId)
+    case undecodableId(AnyJSONRPCResponseError)
+}
+
+extension JSONRPCMessage: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case error
+        case result
+        case method
+        case params
+        case jsonrpc
     }
 
-    public var jsonrpc: String
-    public var id: JSONId?
-    public var method: String?
-    public var params: AnyCodable?
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
 
-    @NullCodable
-    public var result: AnyCodable?
-    public var error: AnyJSONRPCResponseError?
-
-    public var kind: Kind {
-        if jsonrpc != "2.0" {
-            return .invalid
+        let version = try container.decode(String.self, forKey: .jsonrpc)
+        if version != "2.0" {
+            throw JSONRPCProtocolError.unsupportedVersion(version)
         }
 
-        let hasId = id != nil
-        let hasMethod = method != nil
-        let hasResultOrError = result != nil || error != nil
-        let hasParams = params != nil
+        // no id means notification
+        if container.contains(.id) == false {
+            let method = try container.decode(String.self, forKey: .method)
+            let params = try? container.decode(AnyCodable.self, forKey: .params)
 
-        switch (hasId, hasMethod, hasResultOrError, hasParams) {
-        case (false, true, false, _):
-            return .notification
-        case (true, false, _, false):
-            return .response
-        case (true, true, false, _):
-            return .request
-        default:
-            return .invalid
+            self = .notification(method, params ?? nil)
+            return
+        }
+
+        // id = null
+        if (try? container.decodeNil(forKey: .id)) == true {
+            let error = try container.decode(AnyJSONRPCResponseError.self, forKey: .error)
+
+            self = .undecodableId(error)
+            return
+        }
+
+        let id = try container.decode(JSONId.self, forKey: .id)
+
+        if container.contains(.method) {
+            let method = try container.decode(String.self, forKey: .method)
+            let params = try? container.decode(AnyCodable.self, forKey: .params)
+
+            self = .request(id, method, params)
+            return
+        }
+
+        self = .response(id)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode("2.0", forKey: .jsonrpc)
+
+        switch self {
+        case .undecodableId(let error):
+            try container.encodeNil(forKey: .id)
+            try container.encode(error, forKey: .error)
+        case .notification(let method, let params):
+            try container.encode(method, forKey: .method)
+
+            if params != AnyCodable(nilLiteral: ()) {
+                try container.encode(params, forKey: .params)
+            }
+        case .request(let id, let method, let params):
+            try container.encode(id, forKey: .id)
+            try container.encode(method, forKey: .method)
+
+            if let params = params {
+                try container.encode(params, forKey: .params)
+            }
+        case .response(let id):
+            try container.encode(id, forKey: .id)
+
+            throw JSONRPCProtocolError.malformedMessage
         }
     }
+
 }
 
 public struct JSONRPCRequest<T>: Codable where T: Codable {
@@ -90,6 +140,12 @@ public struct JSONRPCResponseError<T>: Codable where T: Codable {
     public var code: Int
     public var message: String
     public var data: T?
+
+    public init(code: Int, message: String, data: T? = nil) {
+        self.code = code
+        self.message = message
+        self.data = data
+    }
 }
 
 extension JSONRPCResponseError: Equatable where T: Equatable {
@@ -100,30 +156,111 @@ extension JSONRPCResponseError: Hashable where T: Hashable {
 
 public typealias AnyJSONRPCResponseError = JSONRPCResponseError<AnyCodable>
 
-public struct JSONRPCResponse<T>: Codable where T: Codable {
-    public var jsonrpc: String
-    public var id: JSONId
+public enum JSONRPCResponse<T> where T: Codable {
+    case result(JSONId, T)
+    case failure(JSONId, AnyJSONRPCResponseError)
 
-    @NullCodable
-    public var result: T?
-    public var error: AnyJSONRPCResponseError?
-
-    public init(id: JSONId, result: T?) {
-        self.jsonrpc = "2.0"
-        self.id = id
-        self.result = result
+    public init(id: JSONId, result: T) {
+        self = .result(id, result)
     }
 
-    public init(id: JSONId, errorCode: Int, message: String) {
-        self.jsonrpc = "2.0"
-        self.id = id
-        self.error = AnyJSONRPCResponseError(code: JSONRPCErrors.internalError, message: message, data: nil)
+    public var result: T? {
+        switch self {
+        case .result(_, let value):
+            return value
+        default:
+            return nil
+        }
     }
 
-    public init(id: JSONId, error: Error) {
-        self.init(id: id,
-                  errorCode: JSONRPCErrors.internalError,
-                  message: error.localizedDescription)
+    public var error: AnyJSONRPCResponseError? {
+        switch self {
+        case .result:
+            return nil
+        case .failure(_, let error):
+            return error
+        }
+    }
+
+    public var id: JSONId {
+        switch self {
+        case .result(let id, _):
+            return id
+        case .failure(let id, _):
+            return id
+        }
+    }
+
+    public var jsonrpc: String {
+        return "2.0"
+    }
+}
+
+extension JSONRPCResponse: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case error
+        case result
+        case jsonrpc
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let version = try container.decode(String.self, forKey: .jsonrpc)
+        if version != "2.0" {
+            throw JSONRPCProtocolError.unsupportedVersion(version)
+        }
+
+        let id = try container.decode(JSONId.self, forKey: .id)
+
+        if container.contains(.error) == false {
+            let value = try container.decode(T.self, forKey: .result)
+            self = .result(id, value)
+
+            return
+        }
+
+        if container.contains(.result) == false {
+            let error = try container.decode(AnyJSONRPCResponseError.self, forKey: .error)
+            self = .failure(id, error)
+
+            return
+        }
+
+        // ok, we have both. This is not allowed by the spec, but we
+        // don't want to be too strict with what we accept
+        if try container.decodeNil(forKey: .error) {
+            let value = try container.decode(T.self, forKey: .result)
+            self = .result(id, value)
+
+            return
+        }
+
+        // in this case,
+        if try container.decodeNil(forKey: .result) {
+            let error = try container.decode(AnyJSONRPCResponseError.self, forKey: .error)
+            self = .failure(id, error)
+
+            return
+        }
+
+        throw JSONRPCProtocolError.malformedMessage
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode("2.0", forKey: .jsonrpc)
+
+        switch self {
+        case .failure(let id, let error):
+            try container.encode(id, forKey: .id)
+            try container.encode(error, forKey: .error)
+        case .result(let id, let value):
+            try container.encode(id, forKey: .id)
+            try container.encode(value, forKey: .result)
+        }
     }
 }
 
@@ -131,11 +268,14 @@ extension JSONRPCResponse: Equatable where T: Equatable {
 }
 
 extension JSONRPCResponse: Hashable where T: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(jsonrpc)
-        hasher.combine(id)
-        hasher.combine(result)
-        hasher.combine(error)
+}
+
+extension JSONRPCResponse {
+    static func internalError(id: JSONId, message: String, data: AnyCodable = nil) -> JSONRPCResponse<AnyCodable> {
+        let error = AnyJSONRPCResponseError(code: JSONRPCErrors.internalError,
+                                            message: message,
+                                            data: data)
+        return .failure(id, error)
     }
 }
 

@@ -52,3 +52,15 @@ extension JSONId: CustomStringConvertible {
         }
     }
 }
+
+extension JSONId: ExpressibleByIntegerLiteral {
+    public init(integerLiteral value: Int) {
+        self.init(value)
+    }
+}
+
+extension JSONId: ExpressibleByStringLiteral {
+    public init(stringLiteral value: String) {
+        self.init(value)
+    }
+}

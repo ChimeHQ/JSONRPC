@@ -147,28 +147,27 @@ extension ProtocolTransport {
     }
 
     private func decodeAndDispatch(data: Data) throws {
-        // Decoding correctly is a challange. The message forms have a lot of optional attributes, which
-        // makes them indistinguishable from Codable's perspective. The solution I came up with is to
-        // decode a generic "message" type, and then inspect the non-null properties to determine the actual
-        // message struct.
-
         let msg = try decoder.decode(JSONRPCMessage.self, from: data)
 
-        switch msg.kind {
-        case .invalid:
-            throw ProtocolTransportError.undecodableMesssage(data)
-        case .notification:
-            let note = try decoder.decode(AnyJSONRPCNotification.self, from: data)
+        switch msg {
+        case .notification(let method, let params):
+            let note = AnyJSONRPCNotification(method: method, params: params)
 
             dispatchNotification(note, originalData: data)
-        case .response:
-            let rsp = try decoder.decode(AnyJSONRPCResponse.self, from: data)
+        case .response(let id):
+            let resp = AnyJSONRPCResponse(id: id, result: nil)
 
-            try dispatchResponse(rsp, originalData: data)
-        case .request:
-            let request = try decoder.decode(AnyJSONRPCRequest.self, from: data)
+            try dispatchResponse(resp, originalData: data)
+        case .request(let id, let method, let params):
+            let req = AnyJSONRPCRequest(id: id, method: method, params: params)
 
-            try dispatchRequest(request, originalData: data)
+            try dispatchRequest(req, originalData: data)
+        case .undecodableId(let error):
+            #if os(Linux)
+            print("sender reported undecodable id: ", String(describing: error))
+            #else
+            os_log("sender reported undecodable id: %{public}@", log: self.log, type: .error, String(describing: error))
+            #endif
         }
     }
 
@@ -178,9 +177,8 @@ extension ProtocolTransport {
         }
 
         guard let handler = requestHandler else {
-            let failure = AnyJSONRPCResponse(id: request.id,
-                                             errorCode: JSONRPCErrors.internalError,
-                                             message: "No response handler installed")
+            let failure = AnyJSONRPCResponse.internalError(id: request.id,
+                                                        message: "No response handler installed")
 
             try self.encodeAndWrite(failure)
 

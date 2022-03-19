@@ -9,7 +9,7 @@ import XCTest
 import JSONRPC
 
 class ProtocolTransportTests: XCTestCase {
-    typealias TestResponse = JSONRPCResponse<String>
+    typealias TestResponse = JSONRPCResponse<String?>
     typealias TestResult = Result<TestResponse, Error>
 
     func testSendRequest() throws {
@@ -132,7 +132,12 @@ class ProtocolTransportTests: XCTestCase {
                 return
             }
 
-            XCTAssertNil(response.result)
+            switch response {
+            case .result(_, let value):
+                XCTAssertNil(value)
+            case .failure:
+                XCTFail()
+            }
 
             expectation.fulfill()
         }
