@@ -84,7 +84,9 @@ public class StdioDataTransport: DataTransport {
     }
 
     private func forwardDataToHandler(_ data: Data) {
-        queue.async { [unowned self] in
+        queue.async { [weak self] in
+            guard let self = self else { return }
+            
             if self.closed {
                 return
             }
@@ -94,18 +96,18 @@ public class StdioDataTransport: DataTransport {
     }
 
     private func forwardErrorDataToHandler(_ data: Data) {
-        queue.async { [unowned self] in
-            if self.closed {
-                return
-            }
-
+        queue.async { [weak self] in
             // Just print for now. Perhaps provide a way to hook
             // this up to a caller?
             if let string = String(bytes: data, encoding: .utf8) {
                 #if os(Linux)
                 print("stderr: \(string)")
                 #else
-                os_log("stderr: %{public}@", log: self.log, type: .error, string)
+                if let log = self?.log {
+                    os_log("stderr: %{public}@", log: log, type: .error, string)
+                } else {
+                    print("stderr: \(string)")
+                }
                 #endif
             }
         }
