@@ -3,8 +3,7 @@
 [![Platforms][platforms badge]][platforms]
 
 # JSONRPC
-
-There are already a bunch of packages out there for doing JSON-RPC in Swift. This one is just very simple and makes no assumptions about the transport stream type.
+A simple Swift library for JSON-RPC. It features strong type-safety and makes no assumptions about the underlying transport stream.
 
 ## Integration
 
