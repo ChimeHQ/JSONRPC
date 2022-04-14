@@ -5,7 +5,7 @@ import os.log
 
 public enum ProtocolTransportError: Error {
     case undecodableMesssage(Data)
-    case unexpectedResponse(AnyJSONRPCResponse)
+    case unexpectedResponse(Data)
     case abandonedRequest
     case dataStreamClosed
 }
@@ -14,7 +14,6 @@ public class ProtocolTransport {
     private typealias DataResult = Result<Data, Error>
     private typealias MessageResponder = (DataResult) -> Void
     public typealias ResponseResult<T: Codable> = Result<JSONRPCResponse<T>, Error>
-    public typealias WriteHandler = (Data) throws -> Void
 
     private var id: Int
     private let queue: DispatchQueue
@@ -25,14 +24,14 @@ public class ProtocolTransport {
     public var requestHandler: ((AnyJSONRPCRequest, Data, @escaping (AnyJSONRPCResponse) -> Void) -> Void)?
     public var notificationHandler: ((AnyJSONRPCNotification, Data, @escaping (Error?) -> Void) -> Void)?
     public var errorHandler: ((Error) -> Void)?
-    private let messageTransport: MessageTransport
+    private let dataTransport: DataTransport
     #if !os(Linux)
     private let log: OSLog
     #endif
     public var logMessages = false
 
-    public init(messageTransport: MessageTransport) {
-        self.messageTransport = messageTransport
+    public init(dataTransport: DataTransport) {
+        self.dataTransport = dataTransport
         self.id = 1
         self.queue = DispatchQueue(label: "com.chimehq.JSONRPC.ProtocolTransport")
         self.encoder = JSONEncoder()
@@ -42,9 +41,9 @@ public class ProtocolTransport {
         self.log = OSLog(subsystem: "com.chimehq.JSONRPC", category: "ProtocolTransport")
         #endif
 
-        self.messageTransport.dataHandler = { [unowned self] (data) in
+        dataTransport.setReaderHandler({ [unowned self] (data) in
             self.dataAvailable(data)
-        }
+        })
     }
 
     deinit {
@@ -203,7 +202,7 @@ extension ProtocolTransport {
 
     }
     private func write(_ data: Data) throws {
-        messageTransport.write(data)
+        dataTransport.write(data)
     }
 
     private func relayResponse<T>(result: DataResult, responseHandler: @escaping (ResponseResult<T>) -> Void) where T: Decodable {
@@ -229,7 +228,7 @@ extension ProtocolTransport {
         let key = message.id.description
 
         guard let responder = responders[key] else {
-            throw ProtocolTransportError.unexpectedResponse(message)
+            throw ProtocolTransportError.unexpectedResponse(data)
         }
 
         responder(.success(data))

@@ -34,6 +34,14 @@ public func sendNotification<T>(_ params: T?, method: String, completionHandler:
 
 This is a concrete implemenation of the `DataTransport` protocol, which passes data across stdio. 
 
+### MessageTransport
+
+This gives you a way to frame/delimit messages in the wire protocol. It is optional, in case you don't need/want to use that functionality. It relies on the `MessageProtocol` protocol.
+
+### SeperatedHTTPHeaderMessageProtocol
+
+A concrete `MessageProtocol` that uses HTTP headers. It requires at least `Content-Length`, and by default expects all fields to be seperated by `\r\n`.
+
 ### Suggestions or Feedback
 
 We'd love to hear from you! Get in touch via [twitter](https://twitter.com/chimehq), an issue, or a pull request.

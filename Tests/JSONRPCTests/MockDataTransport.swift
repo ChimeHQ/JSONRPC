@@ -1,14 +1,7 @@
-//
-//  MockDataTransport.swift
-//  JSONRPCTests
-//
-//  Created by Matthew Massicotte on 2021-07-19.
-//
-
 import Foundation
 import JSONRPC
 
-class MockDataTransport: DataTransport {
+final class MockDataTransport: DataTransport {
     var writtenData: [Data]
     var readHandler: ReadHandler?
 

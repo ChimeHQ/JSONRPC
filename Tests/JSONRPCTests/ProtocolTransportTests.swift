@@ -14,8 +14,7 @@ class ProtocolTransportTests: XCTestCase {
 
     func testSendRequest() throws {
         let dataTransport = MockDataTransport()
-        let messageTransport = MessageTransport(dataTransport: dataTransport)
-        let transport = ProtocolTransport(messageTransport: messageTransport)
+        let transport = ProtocolTransport(dataTransport: dataTransport)
 
         let expectation = XCTestExpectation(description: "Response Message")
 
@@ -28,7 +27,7 @@ class ProtocolTransportTests: XCTestCase {
         }
 
         let response = TestResponse(id: JSONId(1), result: "goodbye")
-        let responseData = try MessageTransport.encode(response)
+        let responseData = try JSONEncoder().encode(response)
 
         dataTransport.mockRead(responseData)
 
@@ -37,8 +36,7 @@ class ProtocolTransportTests: XCTestCase {
 
     func testManySendRequestsWithResponsesDeliveredOnABackgroundQueueTest() throws {
         let dataTransport = MockDataTransport()
-        let messageTransport = MessageTransport(dataTransport: dataTransport)
-        let transport = ProtocolTransport(messageTransport: messageTransport)
+        let transport = ProtocolTransport(dataTransport: dataTransport)
 
         let iterations = 1000
         let expectation = XCTestExpectation(description: "Response Message")
@@ -59,7 +57,7 @@ class ProtocolTransportTests: XCTestCase {
             }
 
             let response = TestResponse(id: JSONId(i), result: responseParam)
-            let responseData = try MessageTransport.encode(response)
+            let responseData = try JSONEncoder().encode(response)
 
             // this must happen asynchronously to match the behavior of NSFileHandle
             queue.async {
@@ -72,8 +70,7 @@ class ProtocolTransportTests: XCTestCase {
 
     func testSendNotification() throws {
         let dataTransport = MockDataTransport()
-        let messageTransport = MessageTransport(dataTransport: dataTransport)
-        let transport = ProtocolTransport(messageTransport: messageTransport)
+        let transport = ProtocolTransport(dataTransport: dataTransport)
 
         let expectation = XCTestExpectation(description: "Notification Message")
 
@@ -87,15 +84,14 @@ class ProtocolTransportTests: XCTestCase {
         wait(for: [expectation], timeout: 1.0)
 
         let result = JSONRPCNotification(method: "mynotification", params: params)
-        let resultData = try MessageTransport.encode(result)
+        let resultData = try JSONEncoder().encode(result)
 
         XCTAssertEqual(dataTransport.writtenData, [resultData])
     }
 
     func testServerToClientNotification() throws {
         let dataTransport = MockDataTransport()
-        let messageTransport = MessageTransport(dataTransport: dataTransport)
-        let transport = ProtocolTransport(messageTransport: messageTransport)
+        let transport = ProtocolTransport(dataTransport: dataTransport)
 
         let expectation = XCTestExpectation(description: "Notification Message")
 
@@ -111,7 +107,7 @@ class ProtocolTransportTests: XCTestCase {
         }
 
         let response = JSONRPCNotification<String>(method: "iamnotification", params: "iamstring")
-        let responseData = try MessageTransport.encode(response)
+        let responseData = try JSONEncoder().encode(response)
 
         dataTransport.mockRead(responseData)
 
@@ -120,8 +116,7 @@ class ProtocolTransportTests: XCTestCase {
 
     func testNullResultResponse() throws {
         let dataTransport = MockDataTransport()
-        let messageTransport = MessageTransport(dataTransport: dataTransport)
-        let transport = ProtocolTransport(messageTransport: messageTransport)
+        let transport = ProtocolTransport(dataTransport: dataTransport)
 
         let expectation = XCTestExpectation(description: "Response Message")
 
@@ -143,7 +138,7 @@ class ProtocolTransportTests: XCTestCase {
         }
 
         let response = TestResponse(id: JSONId(1), result: nil)
-        let responseData = try MessageTransport.encode(response)
+        let responseData = try JSONEncoder().encode(response)
 
         dataTransport.mockRead(responseData)
 
@@ -155,8 +150,7 @@ class ProtocolTransportTests: XCTestCase {
 
         DispatchQueue.global().async {
             let dataTransport = MockDataTransport()
-            let messageTransport = MessageTransport(dataTransport: dataTransport)
-            let transport = ProtocolTransport(messageTransport: messageTransport)
+            let transport = ProtocolTransport(dataTransport: dataTransport)
 
             let params = "hello"
             transport.sendRequest(params, method: "mymethod") { (result: Result<TestResponse, Error>) in
@@ -165,7 +159,7 @@ class ProtocolTransportTests: XCTestCase {
                     XCTFail()
                 case .failure(let error):
                     print("failed with \(error)")
-                    
+
                     expectation.fulfill()
                 }
             }

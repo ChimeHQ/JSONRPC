@@ -1,14 +1,7 @@
-//
-//  MessageTransportTests.swift
-//  JSONRPCTests
-//
-//  Created by Matthew Massicotte on 2021-07-19.
-//
-
 import XCTest
-@testable import JSONRPC
+import JSONRPC
 
-class MessageTransportTests: XCTestCase {
+final class MessageTransportTests: XCTestCase {
     func writeMessageAndReadResult(_ message: String) -> Data? {
         let results = writeMessagesAndReadResult([message])
 
@@ -22,7 +15,8 @@ class MessageTransportTests: XCTestCase {
     func writeMessagesAndReadResult(_ messages: [String], resultCount: Int = 1) -> [Data] {
         let dataTransport = MockDataTransport()
 
-        let transport = MessageTransport(dataTransport: dataTransport)
+        let transport = MessageTransport(dataTransport: dataTransport,
+                                         messageProtocol: SeperatedHTTPHeaderMessageFraming())
 
         var receivedData: [Data] = []
 
@@ -110,7 +104,8 @@ class MessageTransportTests: XCTestCase {
     func testDecodeMessagePerformance() {
         let dataTransport = MockDataTransport()
 
-        let transport = MessageTransport(dataTransport: dataTransport)
+        let transport = MessageTransport(dataTransport: dataTransport,
+                                         messageProtocol: SeperatedHTTPHeaderMessageFraming())
 
         var receiveCount: Int = 0
 
@@ -145,5 +140,4 @@ class MessageTransportTests: XCTestCase {
         XCTAssertEqual(results[0], "abcdef".data(using: .utf8)!)
         XCTAssertEqual(results[1], "abcdefghij".data(using: .utf8)!)
     }
-
 }
