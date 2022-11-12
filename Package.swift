@@ -9,10 +9,9 @@ let package = Package(
         .library(name: "JSONRPC", targets: ["JSONRPC"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/Flight-School/AnyCodable", "0.6.0"..<"0.6.3"),
     ],
     targets: [
-        .target(name: "JSONRPC", dependencies: ["AnyCodable"]),
+        .target(name: "JSONRPC", dependencies: []),
         .testTarget(name: "JSONRPCTests", dependencies: ["JSONRPC"]),
     ]
 )

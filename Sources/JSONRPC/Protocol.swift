@@ -1,5 +1,4 @@
 import Foundation
-import AnyCodable
 
 public enum JSONRPCProtocolError: Error {
     case unsupportedVersion(String)
@@ -7,8 +6,8 @@ public enum JSONRPCProtocolError: Error {
 }
 
 public enum JSONRPCMessage {
-    case notification(String, AnyCodable)
-    case request(JSONId, String, AnyCodable?)
+    case notification(String, JSONValue)
+    case request(JSONId, String, JSONValue?)
     case response(JSONId)
     case undecodableId(AnyJSONRPCResponseError)
 }
@@ -34,9 +33,9 @@ extension JSONRPCMessage: Codable {
         // no id means notification
         if container.contains(.id) == false {
             let method = try container.decode(String.self, forKey: .method)
-            let params = try? container.decode(AnyCodable.self, forKey: .params)
+            let params = try? container.decode(JSONValue.self, forKey: .params)
 
-            self = .notification(method, params ?? nil)
+			self = .notification(method, params ?? .null)
             return
         }
 
@@ -52,7 +51,7 @@ extension JSONRPCMessage: Codable {
 
         if container.contains(.method) {
             let method = try container.decode(String.self, forKey: .method)
-            let params = try? container.decode(AnyCodable.self, forKey: .params)
+            let params = try? container.decode(JSONValue.self, forKey: .params)
 
             self = .request(id, method, params)
             return
@@ -73,7 +72,7 @@ extension JSONRPCMessage: Codable {
         case .notification(let method, let params):
             try container.encode(method, forKey: .method)
 
-            if params != AnyCodable(nilLiteral: ()) {
+			if params != JSONValue.null {
                 try container.encode(params, forKey: .params)
             }
         case .request(let id, let method, let params):
@@ -115,7 +114,7 @@ extension JSONRPCRequest: Equatable where T: Equatable {
 extension JSONRPCRequest: Hashable where T: Hashable {
 }
 
-public typealias AnyJSONRPCRequest = JSONRPCRequest<AnyCodable>
+public typealias AnyJSONRPCRequest = JSONRPCRequest<JSONValue>
 
 public struct JSONRPCNotification<T>: Codable where T: Codable {
     public var jsonrpc = "2.0"
@@ -134,7 +133,7 @@ extension JSONRPCNotification: Equatable where T: Equatable {
 extension JSONRPCNotification: Hashable where T: Hashable {
 }
 
-public typealias AnyJSONRPCNotification = JSONRPCNotification<AnyCodable>
+public typealias AnyJSONRPCNotification = JSONRPCNotification<JSONValue>
 
 public struct JSONRPCResponseError<T>: Codable where T: Codable {
     public var code: Int
@@ -154,7 +153,7 @@ extension JSONRPCResponseError: Equatable where T: Equatable {
 extension JSONRPCResponseError: Hashable where T: Hashable {
 }
 
-public typealias AnyJSONRPCResponseError = JSONRPCResponseError<AnyCodable>
+public typealias AnyJSONRPCResponseError = JSONRPCResponseError<JSONValue>
 
 public enum JSONRPCResponse<T> where T: Codable {
     case result(JSONId, T)
@@ -271,7 +270,7 @@ extension JSONRPCResponse: Hashable where T: Hashable {
 }
 
 extension JSONRPCResponse {
-    static func internalError(id: JSONId, message: String, data: AnyCodable = nil) -> JSONRPCResponse<AnyCodable> {
+    static func internalError(id: JSONId, message: String, data: JSONValue = nil) -> JSONRPCResponse<JSONValue> {
         let error = AnyJSONRPCResponseError(code: JSONRPCErrors.internalError,
                                             message: message,
                                             data: data)
@@ -279,4 +278,4 @@ extension JSONRPCResponse {
     }
 }
 
-public typealias AnyJSONRPCResponse = JSONRPCResponse<AnyCodable>
+public typealias AnyJSONRPCResponse = JSONRPCResponse<JSONValue>
