@@ -10,7 +10,23 @@ public enum ProtocolTransportError: Error {
     case dataStreamClosed
 }
 
-public class ProtocolTransport {
+public class ProtocolTransport: @unchecked Sendable {
+	public struct Handlers {
+		public typealias RequestHandler = (AnyJSONRPCRequest, Data, @escaping (AnyJSONRPCResponse) -> Void) -> Void
+		public typealias NotificationHandler = (AnyJSONRPCNotification, Data, @escaping (Error?) -> Void) -> Void
+		public typealias ErrorHandler = (Error) -> Void
+
+		public let request: RequestHandler?
+		public let notification: NotificationHandler?
+		public let error: ErrorHandler?
+
+		public init(request: RequestHandler?, notification: NotificationHandler?, error: ErrorHandler?) {
+			self.request = request
+			self.notification = notification
+			self.error = error
+		}
+	}
+
     private typealias DataResult = Result<Data, Error>
     private typealias MessageResponder = (DataResult) -> Void
     public typealias ResponseResult<T: Codable> = Result<JSONRPCResponse<T>, Error>
@@ -20,10 +36,7 @@ public class ProtocolTransport {
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
     private var responders: [String: MessageResponder]
-
-    public var requestHandler: ((AnyJSONRPCRequest, Data, @escaping (AnyJSONRPCResponse) -> Void) -> Void)?
-    public var notificationHandler: ((AnyJSONRPCNotification, Data, @escaping (Error?) -> Void) -> Void)?
-    public var errorHandler: ((Error) -> Void)?
+	private var handlers = Handlers(request: nil, notification: nil, error: nil)
     private let dataTransport: DataTransport
     #if !os(Linux)
     private let log: OSLog
@@ -51,6 +64,13 @@ public class ProtocolTransport {
             responder(.failure(ProtocolTransportError.dataStreamClosed))
         }
     }
+
+	/// Install functions to handle requests, notifications, and errors.
+	public func setHandlers(_ handlers: Handlers) {
+		queue.async {
+			self.handlers = handlers
+		}
+	}
 }
 
 extension ProtocolTransport  {
@@ -81,6 +101,15 @@ extension ProtocolTransport  {
         }
     }
 
+	@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+	public func sendRequest<T, U>(_ params: T, method: String) async throws -> JSONRPCResponse<U> where T: Codable, U: Decodable {
+		return try await withCheckedThrowingContinuation({ continuation in
+			self.sendRequest(params, method: method) { result in
+				continuation.resume(with: result)
+			}
+		})
+	}
+
     public func sendNotification<T>(_ params: T?, method: String, completionHandler: @escaping (Error?) -> Void = {_ in }) where T: Codable {
         let notification = JSONRPCNotification(method: method, params: params)
 
@@ -94,6 +123,20 @@ extension ProtocolTransport  {
             }
         }
     }
+
+	@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+	public func sendNotification<T>(_ params: T?, method: String) async throws where T: Codable {
+		try await withCheckedThrowingContinuation({ (continuation: CheckedContinuation<Void, Error>) in
+			self.sendNotification(params, method: method) { result in
+				switch result {
+				case .none:
+					continuation.resume()
+				case let error?:
+					continuation.resume(throwing: error)
+				}
+			}
+		})
+	}
 }
 
 extension ProtocolTransport {
@@ -140,7 +183,7 @@ extension ProtocolTransport {
                 os_log("failed to decode data: %{public}@, %{public}@", log: self.log, type: .error, String(describing: error), string)
                 #endif
 
-                self.errorHandler?(error)
+				self.handlers.error?(error)
             }
         }
     }
@@ -175,7 +218,7 @@ extension ProtocolTransport {
             dispatchPrecondition(condition: .onQueue(queue))
         }
 
-        guard let handler = requestHandler else {
+		guard let handler = self.handlers.request else {
             let failure = AnyJSONRPCResponse.internalError(id: request.id,
                                                         message: "No response handler installed")
 
@@ -195,7 +238,7 @@ extension ProtocolTransport {
                     os_log("dispatch handler failed: %{public}@", log: self.log, type: .error, String(describing: error))
                     #endif
 
-                    self.errorHandler?(error)
+					self.handlers.error?(error)
                 }
             }
         })
@@ -237,7 +280,7 @@ extension ProtocolTransport {
     }
 
     private func dispatchNotification(_ notification: AnyJSONRPCNotification, originalData data: Data) {
-        notificationHandler?(notification, data, { (error) in
+		self.handlers.notification?(notification, data, { (error) in
             if let error = error {
                 #if os(Linux)
                 print("notification handler failed: \(error)")
@@ -245,7 +288,9 @@ extension ProtocolTransport {
                 os_log("notification handler failed: %{public}@", log: self.log, type: .error, String(describing: error))
                 #endif
 
-                self.errorHandler?(error)
+				self.queue.async {
+					self.handlers.error?(error)
+				}
             }
         })
     }

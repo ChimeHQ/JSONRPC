@@ -22,12 +22,14 @@ dependencies: [
 This is the core class for using the protocol. It supports sending and receiving generic messages and notifications, as well as responding to protocol-level errors.
 
 ```swift
-public var requestHandler: ((AnyJSONRPCRequest, Data, @escaping (AnyJSONRPCResponse) -> Void) -> Void)?
-public var notificationHandler: ((AnyJSONRPCNotification, Data, @escaping (Error?) -> Void) -> Void)?
-public var errorHandler: ((Error) -> Void)?
+// takes a struct with all of the handler functions needed.
+public func setHandlers(_ handlers: Handlers)
 
 public func sendRequest<T, U>(_ params: T, method: String, responseHandler: @escaping (ResponseResult<U>) -> Void) where T: Codable, U: Decodable
+public func sendRequest<T, U>(_ params: T, method: String) async throws -> JSONRPCResponse<U> where T: Codable, U: Decodable
+    
 public func sendNotification<T>(_ params: T?, method: String, completionHandler: @escaping (Error?) -> Void = {_ in }) where T: Codable
+public func sendNotification<T>(_ params: T?, method: String) async throws where T: Codable
 ```
 
 ### StdioDataTransport

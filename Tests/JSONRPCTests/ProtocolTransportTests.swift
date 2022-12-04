@@ -1,14 +1,7 @@
-//
-//  ProtocolTransportTests.swift
-//  JSONRPCTests
-//
-//  Created by Matthew Massicotte on 2021-07-19.
-//
-
 import XCTest
 import JSONRPC
 
-class ProtocolTransportTests: XCTestCase {
+final class ProtocolTransportTests: XCTestCase {
     typealias TestResponse = JSONRPCResponse<String?>
     typealias TestResult = Result<TestResponse, Error>
 
@@ -89,13 +82,27 @@ class ProtocolTransportTests: XCTestCase {
         XCTAssertEqual(dataTransport.writtenData, [resultData])
     }
 
+	func testSendNotificationAsync() async throws {
+		let dataTransport = MockDataTransport()
+		let transport = ProtocolTransport(dataTransport: dataTransport)
+
+		let params = "hello"
+
+		try await transport.sendNotification(params, method: "mynotification")
+
+		let result = JSONRPCNotification(method: "mynotification", params: params)
+		let resultData = try JSONEncoder().encode(result)
+
+		XCTAssertEqual(dataTransport.writtenData, [resultData])
+	}
+
     func testServerToClientNotification() throws {
         let dataTransport = MockDataTransport()
         let transport = ProtocolTransport(dataTransport: dataTransport)
 
         let expectation = XCTestExpectation(description: "Notification Message")
 
-        transport.notificationHandler = { notification, data, callback in
+		let notifHandler: ProtocolTransport.Handlers.NotificationHandler = { notification, data, callback in
             XCTAssertEqual(notification.method, "iamnotification")
 
             let result = try? JSONDecoder().decode(JSONRPCNotification<String>.self, from: data)
@@ -105,6 +112,8 @@ class ProtocolTransportTests: XCTestCase {
 
             callback(nil)
         }
+
+		transport.setHandlers(.init(request: nil, notification: notifHandler, error: nil))
 
         let response = JSONRPCNotification<String>(method: "iamnotification", params: "iamstring")
         let responseData = try JSONEncoder().encode(response)
