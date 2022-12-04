@@ -27,14 +27,14 @@ public func setHandlers(_ handlers: Handlers)
 
 public func sendRequest<T, U>(_ params: T, method: String, responseHandler: @escaping (ResponseResult<U>) -> Void) where T: Codable, U: Decodable
 public func sendRequest<T, U>(_ params: T, method: String) async throws -> JSONRPCResponse<U> where T: Codable, U: Decodable
-    
+
 public func sendNotification<T>(_ params: T?, method: String, completionHandler: @escaping (Error?) -> Void = {_ in }) where T: Codable
 public func sendNotification<T>(_ params: T?, method: String) async throws where T: Codable
 ```
 
 ### StdioDataTransport
 
-This is a concrete implemenation of the `DataTransport` protocol, which passes data across stdio. 
+This is a concrete implementation of the `DataTransport` protocol, which passes data across stdio. 
 
 ### MessageTransport
 
@@ -42,7 +42,7 @@ This gives you a way to frame/delimit messages in the wire protocol. It is optio
 
 ### SeperatedHTTPHeaderMessageProtocol
 
-A concrete `MessageProtocol` that uses HTTP headers. It requires at least `Content-Length`, and by default expects all fields to be seperated by `\r\n`.
+A concrete `MessageProtocol` that uses HTTP headers. It requires at least `Content-Length`, and by default expects all fields to be separated by `\r\n`.
 
 ### Suggestions or Feedback
 
