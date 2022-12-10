@@ -123,6 +123,37 @@ final class ProtocolTransportTests: XCTestCase {
         wait(for: [expectation], timeout: 1.0)
     }
 
+    func testServerToClientResponseThenNotification() throws {
+        let dataTransport = MockDataTransport()
+        let transport = ProtocolTransport(dataTransport: dataTransport)
+
+        let responseExpectation = XCTestExpectation(description: "Response Message")
+        let notificationExpectation = XCTestExpectation(description: "Notification Message")
+
+        let notifHandler: ProtocolTransport.Handlers.NotificationHandler = { notification, data, callback in
+            self.wait(for: [responseExpectation], timeout: 1.0)
+            notificationExpectation.fulfill()
+            callback(nil)
+        }
+
+        transport.setHandlers(.init(request: nil, notification: notifHandler, error: nil))
+
+        let params = "foo"
+        transport.sendRequest(params, method: "bar") { (result: Result<TestResponse, Error>) in
+            responseExpectation.fulfill()
+        }
+
+        let response = TestResponse(id: JSONId(1), result: nil)
+        let responseData = try JSONEncoder().encode(response)
+        dataTransport.mockRead(responseData)
+
+        let notification = JSONRPCNotification<String>(method: "baz")
+        let notificationData = try JSONEncoder().encode(notification)
+        dataTransport.mockRead(notificationData)
+
+        wait(for: [notificationExpectation], timeout: 1.0)
+    }
+
     func testNullResultResponse() throws {
         let dataTransport = MockDataTransport()
         let transport = ProtocolTransport(dataTransport: dataTransport)

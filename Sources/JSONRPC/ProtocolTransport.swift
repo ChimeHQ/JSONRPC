@@ -253,14 +253,12 @@ extension ProtocolTransport {
         case .failure(let error):
             responseHandler(.failure(error))
         case .success(let data):
-            queue.async {
-                do {
-                    let jsonResult = try self.decoder.decode(JSONRPCResponse<T>.self, from: data)
+            do {
+                let jsonResult = try self.decoder.decode(JSONRPCResponse<T>.self, from: data)
 
-                    responseHandler(.success(jsonResult))
-                } catch {
-                    responseHandler(.failure(error))
-                }
+                responseHandler(.success(jsonResult))
+            } catch {
+                responseHandler(.failure(error))
             }
         }
     }
