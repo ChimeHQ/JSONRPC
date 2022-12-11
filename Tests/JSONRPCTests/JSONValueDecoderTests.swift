@@ -119,7 +119,21 @@ final class JSONValueDecoderTests: XCTestCase {
         XCTAssertThrowsError(
             try JSONValueDecoder().decode(
                 SimpleStruct.self,
-                from: JSONValue.hash(["int8": "1000"])
+                from: JSONValue.hash(["int8": 300])
+            )
+        ) { error in
+            XCTAssertEqual(
+                error.localizedDescription,
+                "The data couldn’t be read because it isn’t in the correct format."
+            )
+        }
+    }
+
+    func testDecodeFloatOverflow() throws {
+        XCTAssertThrowsError(
+            try JSONValueDecoder().decode(
+                SimpleStruct.self,
+                from: JSONValue.hash(["float": 1e300])
             )
         ) { error in
             XCTAssertEqual(

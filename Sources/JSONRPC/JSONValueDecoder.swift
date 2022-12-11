@@ -215,11 +215,10 @@ internal class JSONValueDecoderImpl: Decoder, SingleValueDecodingContainer {
     }
 
     private func inconvertibleType(_ type: Any.Type) throws -> Never {
-        throw DecodingError.typeMismatch(
-            type,
+        throw DecodingError.dataCorrupted(
             DecodingError.Context(
                 codingPath: codingPath,
-                debugDescription: "\(String(describing: value)) cannot be converted to \(type)",
+                debugDescription: "\(String(describing: value)) does not fit in a \(type)",
                 underlyingError: nil
             )
         )
@@ -281,7 +280,9 @@ internal class JSONValueDecoderImpl: Decoder, SingleValueDecodingContainer {
 
     func decode(_ type: Float.Type) throws -> Float {
         guard case let .number(value) = self.value else { try unsatisfiedType(type) }
-        return Float(value)
+        let floatValue = Float(value)
+        if value.isFinite && floatValue.isInfinite { try inconvertibleType(type) }
+        return floatValue
     }
 
     func decode(_ type: Int.Type) throws -> Int {
