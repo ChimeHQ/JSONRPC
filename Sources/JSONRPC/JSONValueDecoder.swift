@@ -234,7 +234,7 @@ internal class JSONValueDecoderImpl: Decoder, SingleValueDecodingContainer {
                 [String: Any].self,
                 DecodingError.Context(
                     codingPath: codingPath,
-                    debugDescription: "\(String(describing: value)) not a container",
+                    debugDescription: "\(String(describing: value)) not a hash",
                     underlyingError: nil
                 )
             )
@@ -249,7 +249,7 @@ internal class JSONValueDecoderImpl: Decoder, SingleValueDecodingContainer {
                 [String: Any].self,
                 DecodingError.Context(
                     codingPath: codingPath,
-                    debugDescription: "\(String(describing: value)) not a container",
+                    debugDescription: "\(String(describing: value)) not an array",
                     underlyingError: nil
                 )
             )
