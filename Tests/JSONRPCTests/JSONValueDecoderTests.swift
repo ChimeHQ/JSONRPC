@@ -83,7 +83,7 @@ final class JSONValueDecoderTests: XCTestCase {
             )
         ) { error in
             guard case let DecodingError.typeMismatch(_, context) = error else {
-                XCTFail("Expected typError")
+                XCTFail("Expected typeError")
                 return
             }
             XCTAssertEqual(
