@@ -18,42 +18,42 @@ public class JSONValueDecoder: TopLevelDecoder {
     }
 }
 
-internal struct JSONKey: CodingKey {
-    public var stringValue: String
-    public var intValue: Int?
+fileprivate struct JSONKey: CodingKey {
+    var stringValue: String
+    var intValue: Int?
 
-    public init(stringValue: String) {
+    init(stringValue: String) {
         self.stringValue = stringValue
         self.intValue = nil
     }
 
-    public init(intValue: Int) {
+    init(intValue: Int) {
         self.stringValue = "\(intValue)"
         self.intValue = intValue
     }
 
-    internal static let `super` = JSONKey(stringValue: "super")
+    static let `super` = JSONKey(stringValue: "super")
 }
 
-internal class JSONUnkeyedContainer: UnkeyedDecodingContainer {
+fileprivate class JSONUnkeyedContainer: UnkeyedDecodingContainer {
     private let decoder: JSONValueDecoderImpl
     private let container: [JSONValue]
-    private(set) public var currentIndex: Int = 0
+    private(set) var currentIndex: Int = 0
 
     internal init(referencing decoder: JSONValueDecoderImpl, wrapping container: [JSONValue]) {
         self.decoder = decoder
         self.container = container
     }
 
-    public var codingPath: [CodingKey] {
+    var codingPath: [CodingKey] {
         return decoder.codingPath
     }
 
-    public var count: Int? {
+    var count: Int? {
         return container.count
     }
 
-    public var isAtEnd: Bool {
+    var isAtEnd: Bool {
         return currentIndex >= container.count
     }
 
@@ -111,7 +111,7 @@ internal class JSONUnkeyedContainer: UnkeyedDecodingContainer {
     }
 }
 
-internal class JSONKeyedContainer<K: CodingKey>: KeyedDecodingContainerProtocol {
+fileprivate class JSONKeyedContainer<K: CodingKey>: KeyedDecodingContainerProtocol {
     typealias Key = K
 
     let decoder: JSONValueDecoderImpl
@@ -123,11 +123,11 @@ internal class JSONKeyedContainer<K: CodingKey>: KeyedDecodingContainerProtocol 
         self.container = container
     }
 
-    public var codingPath: [CodingKey] {
+    var codingPath: [CodingKey] {
         return decoder.codingPath
     }
 
-    public var allKeys: [Key] {
+    var allKeys: [Key] {
         return container.keys.compactMap { Key(stringValue: $0) }
     }
 
@@ -180,18 +180,18 @@ internal class JSONKeyedContainer<K: CodingKey>: KeyedDecodingContainerProtocol 
         }
     }
 
-    public func superDecoder() throws -> Decoder {
+    func superDecoder() throws -> Decoder {
         try withValue(forKey: JSONKey.super) { value in decoder.nested(for: value) }
     }
 
-    public func superDecoder(forKey key: Key) throws -> Decoder {
+    func superDecoder(forKey key: Key) throws -> Decoder {
         try withValue(forKey: key) { value in decoder.nested(for: value) }
     }
 }
 
-internal class JSONValueDecoderImpl: Decoder, SingleValueDecodingContainer {
-    internal(set) public var codingPath: [CodingKey]
-    public var userInfo: [CodingUserInfoKey: Any] = [:]
+fileprivate class JSONValueDecoderImpl: Decoder, SingleValueDecodingContainer {
+    var codingPath: [CodingKey]
+    var userInfo: [CodingUserInfoKey: Any] = [:]
     private let value: JSONValue
 
     init(referencing value: JSONValue, at codingPath: [CodingKey] = []) {
@@ -224,7 +224,7 @@ internal class JSONValueDecoderImpl: Decoder, SingleValueDecodingContainer {
         )
     }
 
-    public func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key>
+    func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key>
             where Key: CodingKey {
         if case let .hash(dictionary) = value {
             return KeyedDecodingContainer(JSONKeyedContainer<Key>(referencing: self, wrapping: dictionary))
@@ -240,7 +240,7 @@ internal class JSONValueDecoderImpl: Decoder, SingleValueDecodingContainer {
         }
     }
 
-    public func unkeyedContainer() throws -> UnkeyedDecodingContainer {
+    func unkeyedContainer() throws -> UnkeyedDecodingContainer {
         if case let .array(array) = value {
             return JSONUnkeyedContainer(referencing: self, wrapping: array)
         } else {
@@ -255,7 +255,7 @@ internal class JSONValueDecoderImpl: Decoder, SingleValueDecodingContainer {
         }
     }
 
-    public func singleValueContainer() throws -> SingleValueDecodingContainer {
+    func singleValueContainer() throws -> SingleValueDecodingContainer {
         self
     }
 
