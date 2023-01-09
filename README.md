@@ -26,11 +26,14 @@ This is the core class for using the protocol. It supports sending and receiving
 // takes a struct with all of the handler functions needed.
 public func setHandlers(_ handlers: Handlers)
 
-public func sendRequest<T, U>(_ params: T, method: String, responseHandler: @escaping (ResponseResult<U>) -> Void) where T: Codable, U: Decodable
-public func sendRequest<T, U>(_ params: T, method: String) async throws -> JSONRPCResponse<U> where T: Codable, U: Decodable
+public func sendDataRequest<T>(_ params: T, method: String, responseHandler: @escaping (DataResult) -> Void) where T: Encodable
+public func sendDataRequest<T>(_ params: T, method: String) async throws -> (AnyJSONRPCResponse, Data) where T: Encodable
 
-public func sendNotification<T>(_ params: T?, method: String, completionHandler: @escaping (Error?) -> Void = {_ in }) where T: Codable
-public func sendNotification<T>(_ params: T?, method: String) async throws where T: Codable
+public func sendRequest<T, U>(_ params: T, method: String, responseHandler: @escaping (ResponseResult<U>) -> Void) where T: Encodable, U: Decodable
+public func sendRequest<T, U>(_ params: T, method: String) async throws -> JSONRPCResponse<U> where T: Encodable, U: Decodable
+
+public func sendNotification<T>(_ params: T?, method: String, completionHandler: @escaping (Error?) -> Void = {_ in }) where T: Encodable
+public func sendNotification<T>(_ params: T?, method: String) async throws where T: Encodable
 ```
 
 ### StdioDataTransport

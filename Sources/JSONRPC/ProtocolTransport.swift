@@ -27,9 +27,9 @@ public class ProtocolTransport: @unchecked Sendable {
 		}
 	}
 
-    private typealias DataResult = Result<Data, Error>
+    public typealias DataResult = Result<(AnyJSONRPCResponse, Data), Error>
     private typealias MessageResponder = (DataResult) -> Void
-    public typealias ResponseResult<T: Codable> = Result<JSONRPCResponse<T>, Error>
+    public typealias ResponseResult<T: Decodable> = Result<JSONRPCResponse<T>, Error>
 
     private var id: Int
     private let queue: DispatchQueue
@@ -74,35 +74,51 @@ public class ProtocolTransport: @unchecked Sendable {
 }
 
 extension ProtocolTransport  {
-    public func sendRequest<T, U>(_ params: T, method: String, responseHandler: @escaping (ResponseResult<U>) -> Void) where T: Codable, U: Decodable {
-        queue.async {
-            let issuedId = self.generateID()
+	public func sendDataRequest<T>(_ params: T, method: String, responseHandler: @escaping (DataResult) -> Void) where T: Encodable {
+		queue.async {
+			let issuedId = self.generateID()
 
-            let request = JSONRPCRequest(id: issuedId, method: method, params: params)
+			let request = JSONRPCRequest(id: issuedId, method: method, params: params)
 
-            do {
-                try self.encodeAndWrite(request)
+			do {
+				try self.encodeAndWrite(request)
+			} catch {
+				responseHandler(.failure(error))
+				return
+			}
 
-                let key = issuedId.description
+			let key = issuedId.description
 
-                precondition(self.responders[key] == nil)
+			precondition(self.responders[key] == nil)
 
-                self.responders[key] = { [weak self] (result) in
-                    guard let self = self else {
-                        responseHandler(.failure(ProtocolTransportError.abandonedRequest))
-                        return
-                    }
+			self.responders[key] = { (result) in
+				responseHandler(result)
+			}
+		}
+	}
 
-                    self.relayResponse(result: result, responseHandler: responseHandler)
-                }
-            } catch {
-                responseHandler(.failure(error))
-            }
-        }
+	@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+	public func sendDataRequest<T>(_ params: T, method: String) async throws -> (AnyJSONRPCResponse, Data) where T: Encodable {
+		return try await withCheckedThrowingContinuation({ continuation in
+			self.sendDataRequest(params, method: method) { result in
+				continuation.resume(with: result)
+			}
+		})
+	}
+
+	public func sendRequest<T, U>(_ params: T, method: String, responseHandler: @escaping (ResponseResult<U>) -> Void) where T: Encodable, U: Decodable {
+		sendDataRequest(params, method: method) { [weak self] (result) in
+			guard let self = self else {
+				responseHandler(.failure(ProtocolTransportError.abandonedRequest))
+				return
+			}
+
+			self.relayResponse(result: result, responseHandler: responseHandler)
+		}
     }
 
 	@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-	public func sendRequest<T, U>(_ params: T, method: String) async throws -> JSONRPCResponse<U> where T: Codable, U: Decodable {
+	public func sendRequest<T, U>(_ params: T, method: String) async throws -> JSONRPCResponse<U> where T: Encodable, U: Decodable {
 		return try await withCheckedThrowingContinuation({ continuation in
 			self.sendRequest(params, method: method) { result in
 				continuation.resume(with: result)
@@ -110,7 +126,7 @@ extension ProtocolTransport  {
 		})
 	}
 
-    public func sendNotification<T>(_ params: T?, method: String, completionHandler: @escaping (Error?) -> Void = {_ in }) where T: Codable {
+    public func sendNotification<T>(_ params: T?, method: String, completionHandler: @escaping (Error?) -> Void = {_ in }) where T: Encodable {
         let notification = JSONRPCNotification(method: method, params: params)
 
         queue.async {
@@ -125,7 +141,7 @@ extension ProtocolTransport  {
     }
 
 	@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-	public func sendNotification<T>(_ params: T?, method: String) async throws where T: Codable {
+	public func sendNotification<T>(_ params: T?, method: String) async throws where T: Encodable {
 		try await withCheckedThrowingContinuation({ (continuation: CheckedContinuation<Void, Error>) in
 			self.sendNotification(params, method: method) { result in
 				switch result {
@@ -148,7 +164,7 @@ extension ProtocolTransport {
         return issuedId
     }
 
-    private func encodeAndWrite<T>(_ value: T) throws where T: Codable {
+    private func encodeAndWrite<T>(_ value: T) throws where T: Encodable {
         let data = try self.encoder.encode(value)
 
         if logMessages, let string = String(data: data, encoding: .utf8) {
@@ -252,7 +268,7 @@ extension ProtocolTransport {
         switch result {
         case .failure(let error):
             responseHandler(.failure(error))
-        case .success(let data):
+		case .success((_, let data)):
             do {
                 let jsonResult = try self.decoder.decode(JSONRPCResponse<T>.self, from: data)
 
@@ -272,7 +288,7 @@ extension ProtocolTransport {
             throw ProtocolTransportError.unexpectedResponse(data)
         }
 
-        responder(.success(data))
+        responder(.success((message, data)))
 
         responders.removeValue(forKey: key)
     }

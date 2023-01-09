@@ -91,7 +91,7 @@ extension JSONRPCMessage: Codable {
 
 }
 
-public struct JSONRPCRequest<T>: Codable where T: Codable {
+public struct JSONRPCRequest<T> {
     public var jsonrpc = "2.0"
     public var id: JSONId
     public var method: String
@@ -108,6 +108,12 @@ public struct JSONRPCRequest<T>: Codable where T: Codable {
     }
 }
 
+extension JSONRPCRequest: Encodable where T: Encodable {
+}
+
+extension JSONRPCRequest: Decodable where T: Decodable {
+}
+
 extension JSONRPCRequest: Equatable where T: Equatable {
 }
 
@@ -116,7 +122,7 @@ extension JSONRPCRequest: Hashable where T: Hashable {
 
 public typealias AnyJSONRPCRequest = JSONRPCRequest<JSONValue>
 
-public struct JSONRPCNotification<T>: Codable where T: Codable {
+public struct JSONRPCNotification<T> {
     public var jsonrpc = "2.0"
     public var method: String
     public var params: T?
@@ -127,6 +133,12 @@ public struct JSONRPCNotification<T>: Codable where T: Codable {
     }
 }
 
+extension JSONRPCNotification: Encodable where T: Encodable {
+}
+
+extension JSONRPCNotification: Decodable where T: Decodable {
+}
+
 extension JSONRPCNotification: Equatable where T: Equatable {
 }
 
@@ -135,7 +147,7 @@ extension JSONRPCNotification: Hashable where T: Hashable {
 
 public typealias AnyJSONRPCNotification = JSONRPCNotification<JSONValue>
 
-public struct JSONRPCResponseError<T>: Codable where T: Codable {
+public struct JSONRPCResponseError<T> {
     public var code: Int
     public var message: String
     public var data: T?
@@ -147,6 +159,12 @@ public struct JSONRPCResponseError<T>: Codable where T: Codable {
     }
 }
 
+extension JSONRPCResponseError: Encodable where T: Encodable {
+}
+
+extension JSONRPCResponseError: Decodable where T: Decodable {
+}
+
 extension JSONRPCResponseError: Equatable where T: Equatable {
 }
 
@@ -155,10 +173,17 @@ extension JSONRPCResponseError: Hashable where T: Hashable {
 
 public typealias AnyJSONRPCResponseError = JSONRPCResponseError<JSONValue>
 
-public enum JSONRPCResponse<T> where T: Codable {
+public enum JSONRPCResponse<T> {
     case result(JSONId, T)
     case failure(JSONId, AnyJSONRPCResponseError)
 
+	private enum CodingKeys: String, CodingKey {
+		case id
+		case error
+		case result
+		case jsonrpc
+	}
+	
     public init(id: JSONId, result: T) {
         self = .result(id, result)
     }
@@ -195,14 +220,7 @@ public enum JSONRPCResponse<T> where T: Codable {
     }
 }
 
-extension JSONRPCResponse: Codable {
-    private enum CodingKeys: String, CodingKey {
-        case id
-        case error
-        case result
-        case jsonrpc
-    }
-
+extension JSONRPCResponse: Decodable where T: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -246,21 +264,23 @@ extension JSONRPCResponse: Codable {
 
         throw JSONRPCProtocolError.malformedMessage
     }
+}
 
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
+extension JSONRPCResponse: Encodable where T: Encodable {
+	public func encode(to encoder: Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
 
-        try container.encode("2.0", forKey: .jsonrpc)
+		try container.encode("2.0", forKey: .jsonrpc)
 
-        switch self {
-        case .failure(let id, let error):
-            try container.encode(id, forKey: .id)
-            try container.encode(error, forKey: .error)
-        case .result(let id, let value):
-            try container.encode(id, forKey: .id)
-            try container.encode(value, forKey: .result)
-        }
-    }
+		switch self {
+		case .failure(let id, let error):
+			try container.encode(id, forKey: .id)
+			try container.encode(error, forKey: .error)
+		case .result(let id, let value):
+			try container.encode(id, forKey: .id)
+			try container.encode(value, forKey: .result)
+		}
+	}
 }
 
 extension JSONRPCResponse: Equatable where T: Equatable {
