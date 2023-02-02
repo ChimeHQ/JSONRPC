@@ -82,6 +82,7 @@ final class ProtocolTransportTests: XCTestCase {
         XCTAssertEqual(dataTransport.writtenData, [resultData])
     }
 
+	@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 	func testSendNotificationAsync() async throws {
 		let dataTransport = MockDataTransport()
 		let transport = ProtocolTransport(dataTransport: dataTransport)
