@@ -1,5 +1,16 @@
 import Foundation
-import Combine
+#if canImport(Combine)
+    import Combine
+#else
+    public protocol TopLevelDecoder {
+        associatedtype Input
+
+        func decode<T>(
+            _ type: T.Type,
+            from: JSONValueDecoder.Input
+        ) throws -> T where T: Decodable
+    }
+#endif
 
 /// An object that decodes instances of a data type from `JSONValue` objects.
 public class JSONValueDecoder: TopLevelDecoder {
