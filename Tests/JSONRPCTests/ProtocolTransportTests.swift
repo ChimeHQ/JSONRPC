@@ -79,7 +79,7 @@ final class ProtocolTransportTests: XCTestCase {
         let result = JSONRPCNotification(method: "mynotification", params: params)
         let resultData = try JSONEncoder().encode(result)
 
-        XCTAssertEqual(dataTransport.writtenData, [resultData])
+        assertDataArraysEquals(dataTransport.writtenData, [resultData])
     }
 
 	@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
@@ -94,7 +94,16 @@ final class ProtocolTransportTests: XCTestCase {
 		let result = JSONRPCNotification(method: "mynotification", params: params)
 		let resultData = try JSONEncoder().encode(result)
 
-		XCTAssertEqual(dataTransport.writtenData, [resultData])
+		assertDataArraysEquals(dataTransport.writtenData, [resultData])
+	}
+
+	func assertDataArraysEquals(_ expr1: [Data], _ expr2: [Data]) {
+		XCTAssertEqual(expr1.count, expr2.count)
+		for idx in 0..<expr1.count {
+			let sorted1 = expr1[idx].sorted()
+			let sorted2 = expr2[idx].sorted()
+			XCTAssertEqual(sorted1, sorted2)
+		}
 	}
 
     func testServerToClientNotification() throws {

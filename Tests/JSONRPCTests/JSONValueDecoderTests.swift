@@ -108,10 +108,17 @@ final class JSONValueDecoderTests: XCTestCase {
                 from: JSONValue.hash(["double": "string"])
             )
         ) { error in
-            XCTAssertEqual(
-                error.localizedDescription,
-                "The data couldn’t be read because it isn’t in the correct format."
-            )
+        	#if os(Linux)
+                        XCTAssertEqual(
+		            error.localizedDescription,
+		            "The operation could not be completed. The data isn’t in the correct format."
+		        )
+        	#else
+		        XCTAssertEqual(
+		            error.localizedDescription,
+		            "The data couldn’t be read because it isn’t in the correct format."
+		        )
+            #endif
         }
     }
 
@@ -122,10 +129,17 @@ final class JSONValueDecoderTests: XCTestCase {
                 from: JSONValue.hash(["int8": 300])
             )
         ) { error in
-            XCTAssertEqual(
-                error.localizedDescription,
-                "The data couldn’t be read because it isn’t in the correct format."
-            )
+        	#if os(Linux)
+                        XCTAssertEqual(
+		            error.localizedDescription,
+		            "The operation could not be completed. The data isn’t in the correct format."
+		        )
+        	#else
+		        XCTAssertEqual(
+		            error.localizedDescription,
+		            "The data couldn’t be read because it isn’t in the correct format."
+		        )
+            #endif
         }
     }
 
@@ -136,10 +150,17 @@ final class JSONValueDecoderTests: XCTestCase {
                 from: JSONValue.hash(["float": 1e300])
             )
         ) { error in
-            XCTAssertEqual(
-                error.localizedDescription,
-                "The data couldn’t be read because it isn’t in the correct format."
-            )
+        	#if os(Linux)
+                        XCTAssertEqual(
+		            error.localizedDescription,
+		            "The operation could not be completed. The data isn’t in the correct format."
+		        )
+        	#else
+		        XCTAssertEqual(
+		            error.localizedDescription,
+		            "The data couldn’t be read because it isn’t in the correct format."
+		        )
+            #endif
         }
     }
 }
