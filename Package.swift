@@ -11,7 +11,7 @@ let package = Package(
     dependencies: [
     ],
     targets: [
-        .target(name: "JSONRPC", dependencies: []),
+        .target(name: "JSONRPC", dependencies: [], swiftSettings: [.unsafeFlags(["-Xfrontend", "-strict-concurrency=complete"])]),
         .testTarget(name: "JSONRPCTests", dependencies: ["JSONRPC"]),
     ]
 )

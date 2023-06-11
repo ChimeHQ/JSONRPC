@@ -3,7 +3,7 @@ import Foundation
 import os.log
 #endif
 
-public class StdioDataTransport: DataTransport {
+public class StdioDataTransport: DataTransport, @unchecked Sendable {
     public let stdinPipe: Pipe
     public let stdoutPipe: Pipe
     public let stderrPipe: Pipe

@@ -159,17 +159,11 @@ public struct JSONRPCResponseError<T> {
     }
 }
 
-extension JSONRPCResponseError: Encodable where T: Encodable {
-}
-
-extension JSONRPCResponseError: Decodable where T: Decodable {
-}
-
-extension JSONRPCResponseError: Equatable where T: Equatable {
-}
-
-extension JSONRPCResponseError: Hashable where T: Hashable {
-}
+extension JSONRPCResponseError: Encodable where T: Encodable {}
+extension JSONRPCResponseError: Decodable where T: Decodable {}
+extension JSONRPCResponseError: Equatable where T: Equatable {}
+extension JSONRPCResponseError: Hashable where T: Hashable {}
+extension JSONRPCResponseError: Sendable where T: Sendable {}
 
 public typealias AnyJSONRPCResponseError = JSONRPCResponseError<JSONValue>
 
@@ -283,11 +277,9 @@ extension JSONRPCResponse: Encodable where T: Encodable {
 	}
 }
 
-extension JSONRPCResponse: Equatable where T: Equatable {
-}
-
-extension JSONRPCResponse: Hashable where T: Hashable {
-}
+extension JSONRPCResponse: Equatable where T: Equatable {}
+extension JSONRPCResponse: Hashable where T: Hashable {}
+extension JSONRPCResponse: Sendable where T: Sendable {}
 
 extension JSONRPCResponse {
     static func internalError(id: JSONId, message: String, data: JSONValue = nil) -> JSONRPCResponse<JSONValue> {

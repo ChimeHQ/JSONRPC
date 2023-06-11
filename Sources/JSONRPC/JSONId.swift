@@ -1,6 +1,6 @@
 import Foundation
 
-public enum JSONId {
+public enum JSONId: Sendable {
     case numericId(Int)
     case stringId(String)
 
