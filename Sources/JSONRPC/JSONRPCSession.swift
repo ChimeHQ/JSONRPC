@@ -1,7 +1,6 @@
 import Foundation
-#if !os(Linux)
-import OSLog
-#endif
+
+#if compiler(>=5.9)
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public struct DataChannel: Sendable {
@@ -206,3 +205,5 @@ extension JSONRPCSession {
 		}
 	}
 }
+
+#endif

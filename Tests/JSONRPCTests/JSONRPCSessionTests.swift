@@ -1,6 +1,8 @@
 import XCTest
 import JSONRPC
 
+#if compiler(>=5.9)
+
 final class JSONRPCSessionTests: XCTestCase {
 	typealias TestResponse = JSONRPCResponse<String?>
 	typealias TestResult = Result<TestResponse, Error>
@@ -26,3 +28,5 @@ final class JSONRPCSessionTests: XCTestCase {
 		XCTAssertEqual(response.result, "goodbye")
 	}
 }
+
+#endif
