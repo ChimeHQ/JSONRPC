@@ -30,6 +30,7 @@ extension DataChannel {
 	}
 }
 
+#if compiler(>=5.9)
 private struct JSONRPCRequestReplyEncodableShim: Encodable {
 	let id: JSONId
 	let result: JSONRPCSession.RequestResult
@@ -57,7 +58,6 @@ private struct JSONRPCRequestReplyEncodableShim: Encodable {
 	}
 }
 
-#if compiler(>=5.9)
 public actor JSONRPCSession {
 	public typealias RequestResult = Result<Encodable & Sendable, AnyJSONRPCResponseError>
 	public typealias RequestHandler = @Sendable (RequestResult) async -> Void
