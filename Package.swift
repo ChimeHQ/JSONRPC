@@ -4,14 +4,14 @@ import PackageDescription
 
 let package = Package(
     name: "JSONRPC",
-    platforms: [.macOS(.v10_12), .iOS(.v10), .tvOS(.v10), .watchOS(.v3)],
+    platforms: [.macOS(.v10_15), .iOS(.v13), .tvOS(.v13), .watchOS(.v6)],
     products: [
         .library(name: "JSONRPC", targets: ["JSONRPC"]),
     ],
     dependencies: [
     ],
     targets: [
-        .target(name: "JSONRPC", dependencies: [], swiftSettings: [.unsafeFlags(["-Xfrontend", "-strict-concurrency=complete"])]),
+        .target(name: "JSONRPC", dependencies: []),
         .testTarget(name: "JSONRPCTests", dependencies: ["JSONRPC"]),
     ]
 )

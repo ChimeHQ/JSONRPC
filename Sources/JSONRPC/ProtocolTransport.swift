@@ -235,8 +235,8 @@ extension ProtocolTransport {
         }
 
 		guard let handler = self.handlers.request else {
-            let failure = AnyJSONRPCResponse.internalError(id: request.id,
-                                                        message: "No response handler installed")
+			let error = AnyJSONRPCResponseError(code: JSONRPCErrors.internalError, message: "No response handler installed")
+			let failure = AnyJSONRPCResponse(id: request.id, content: .failure(error))
 
             try self.encodeAndWrite(failure)
 

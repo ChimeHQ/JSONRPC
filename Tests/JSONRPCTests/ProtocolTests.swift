@@ -9,7 +9,7 @@ final class ProtocolTests: XCTestCase {
         let data = try XCTUnwrap(string.data(using: .utf8))
         let response = try JSONDecoder().decode(JSONRPCResponse<String>.self, from: data)
 
-        let expected = JSONRPCResponse<String>.result(1, "hello")
+		let expected = JSONRPCResponse<String>(id: 1, result: "hello")
 
         XCTAssertEqual(response, expected)
     }
@@ -22,8 +22,8 @@ final class ProtocolTests: XCTestCase {
         let response = try JSONDecoder().decode(JSONRPCResponse<String>.self, from: data)
 
         let error = AnyJSONRPCResponseError(code: 1, message: "hello", data: nil)
-        let expected = JSONRPCResponse<String>.failure(1, error)
-        
+		let expected = JSONRPCResponse<String>(id: 1, content: .failure(error))
+
         XCTAssertEqual(response, expected)
     }
 
@@ -51,7 +51,7 @@ final class ProtocolTests: XCTestCase {
         let response = try JSONDecoder().decode(JSONRPCResponse<String>.self, from: data)
 
         let error = AnyJSONRPCResponseError(code: 1, message: "hello", data: nil)
-        let expected = JSONRPCResponse<String>.failure(1, error)
+		let expected = JSONRPCResponse<String>(id: 1, content: .failure(error))
 
         XCTAssertEqual(response, expected)
     }
@@ -64,7 +64,7 @@ final class ProtocolTests: XCTestCase {
         let data = try XCTUnwrap(string.data(using: .utf8))
         let response = try JSONDecoder().decode(JSONRPCResponse<String>.self, from: data)
 
-        let expected = JSONRPCResponse<String>.result(1, "hello")
+		let expected = JSONRPCResponse<String>(id: 1, result: "hello")
 
         XCTAssertEqual(response, expected)
     }
@@ -106,7 +106,7 @@ final class ProtocolTests: XCTestCase {
         let data = try XCTUnwrap(string.data(using: .utf8))
         let response = try JSONDecoder().decode(JSONRPCResponse<String?>.self, from: data)
 
-        let expected = JSONRPCResponse<String?>.result(1, nil)
+		let expected = JSONRPCResponse<String?>(id: 1, result: nil)
 
         XCTAssertEqual(response, expected)
     }
@@ -140,7 +140,7 @@ final class ProtocolTests: XCTestCase {
     }
 
     func testEncodeResponse() throws {
-        let response = JSONRPCResponse<String>.result(1, "hello")
+		let response = JSONRPCResponse<String>(id: 1, result: "hello")
 
         let data = try JSONEncoder().encode(response)
 

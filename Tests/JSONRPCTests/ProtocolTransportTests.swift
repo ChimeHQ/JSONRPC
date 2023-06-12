@@ -171,23 +171,23 @@ final class ProtocolTransportTests: XCTestCase {
         let expectation = XCTestExpectation(description: "Response Message")
 
         let params = "hello"
-        transport.sendRequest(params, method: "mymethod") { (result: Result<TestResponse, Error>) in
-            guard let response = try? result.get() else {
-                XCTFail()
-                return
-            }
+		transport.sendRequest(params, method: "mymethod") { (result: TestResult) in
+			guard let response = try? result.get() else {
+				XCTFail()
+				return
+			}
 
-            switch response {
-            case .result(_, let value):
-                XCTAssertNil(value)
-            case .failure:
-                XCTFail()
-            }
+			switch response.content {
+			case .success(let value):
+				XCTAssertNil(value)
+			case .failure:
+				XCTFail()
+			}
 
-            expectation.fulfill()
-        }
+			expectation.fulfill()
+		}
 
-        let response = TestResponse(id: JSONId(1), result: nil)
+        let response = TestResponse(id: 1, result: nil)
         let responseData = try JSONEncoder().encode(response)
 
         dataTransport.mockRead(responseData)

@@ -108,17 +108,11 @@ public struct JSONRPCRequest<T> {
     }
 }
 
-extension JSONRPCRequest: Encodable where T: Encodable {
-}
-
-extension JSONRPCRequest: Decodable where T: Decodable {
-}
-
-extension JSONRPCRequest: Equatable where T: Equatable {
-}
-
-extension JSONRPCRequest: Hashable where T: Hashable {
-}
+extension JSONRPCRequest: Encodable where T: Encodable {}
+extension JSONRPCRequest: Decodable where T: Decodable {}
+extension JSONRPCRequest: Equatable where T: Equatable {}
+extension JSONRPCRequest: Hashable where T: Hashable {}
+extension JSONRPCRequest: Sendable where T: Sendable {}
 
 public typealias AnyJSONRPCRequest = JSONRPCRequest<JSONValue>
 
@@ -133,21 +127,15 @@ public struct JSONRPCNotification<T> {
     }
 }
 
-extension JSONRPCNotification: Encodable where T: Encodable {
-}
-
-extension JSONRPCNotification: Decodable where T: Decodable {
-}
-
-extension JSONRPCNotification: Equatable where T: Equatable {
-}
-
-extension JSONRPCNotification: Hashable where T: Hashable {
-}
+extension JSONRPCNotification: Encodable where T: Encodable {}
+extension JSONRPCNotification: Decodable where T: Decodable {}
+extension JSONRPCNotification: Equatable where T: Equatable {}
+extension JSONRPCNotification: Hashable where T: Hashable {}
+extension JSONRPCNotification: Sendable where T: Sendable {}
 
 public typealias AnyJSONRPCNotification = JSONRPCNotification<JSONValue>
 
-public struct JSONRPCResponseError<T> {
+public struct JSONRPCResponseError<T>: Error {
     public var code: Int
     public var message: String
     public var data: T?
@@ -167,9 +155,9 @@ extension JSONRPCResponseError: Sendable where T: Sendable {}
 
 public typealias AnyJSONRPCResponseError = JSONRPCResponseError<JSONValue>
 
-public enum JSONRPCResponse<T> {
-    case result(JSONId, T)
-    case failure(JSONId, AnyJSONRPCResponseError)
+public struct JSONRPCResponse<T> {
+	public let id: JSONId
+	public let content: Result<T, AnyJSONRPCResponseError>
 
 	private enum CodingKeys: String, CodingKey {
 		case id
@@ -177,36 +165,33 @@ public enum JSONRPCResponse<T> {
 		case result
 		case jsonrpc
 	}
-	
+
+	public init(id: JSONId, content: Result<T, AnyJSONRPCResponseError>) {
+		self.id = id
+		self.content = content
+	}
+
     public init(id: JSONId, result: T) {
-        self = .result(id, result)
+		self.id = id
+		self.content = .success(result)
     }
 
     public var result: T? {
-        switch self {
-        case .result(_, let value):
-            return value
-        default:
+        switch content {
+		case .success(let value):
+			return value
+		case .failure:
             return nil
         }
     }
 
     public var error: AnyJSONRPCResponseError? {
-        switch self {
-        case .result:
-            return nil
-        case .failure(_, let error):
-            return error
-        }
-    }
-
-    public var id: JSONId {
-        switch self {
-        case .result(let id, _):
-            return id
-        case .failure(let id, _):
-            return id
-        }
+		switch content {
+		case .success:
+			return nil
+		case .failure(let error):
+			return error
+		}
     }
 
     public var jsonrpc: String {
@@ -227,14 +212,14 @@ extension JSONRPCResponse: Decodable where T: Decodable {
 
         if container.contains(.error) == false {
             let value = try container.decode(T.self, forKey: .result)
-            self = .result(id, value)
+			self = .init(id: id, result: value)
 
             return
         }
 
         if container.contains(.result) == false {
             let error = try container.decode(AnyJSONRPCResponseError.self, forKey: .error)
-            self = .failure(id, error)
+			self = .init(id: id, content: .failure(error))
 
             return
         }
@@ -243,7 +228,7 @@ extension JSONRPCResponse: Decodable where T: Decodable {
         // don't want to be too strict with what we accept
         if try container.decodeNil(forKey: .error) {
             let value = try container.decode(T.self, forKey: .result)
-            self = .result(id, value)
+			self = .init(id: id, result: value)
 
             return
         }
@@ -251,7 +236,7 @@ extension JSONRPCResponse: Decodable where T: Decodable {
         // in this case,
         if try container.decodeNil(forKey: .result) {
             let error = try container.decode(AnyJSONRPCResponseError.self, forKey: .error)
-            self = .failure(id, error)
+			self = .init(id: id, content: .failure(error))
 
             return
         }
@@ -266,12 +251,12 @@ extension JSONRPCResponse: Encodable where T: Encodable {
 
 		try container.encode("2.0", forKey: .jsonrpc)
 
-		switch self {
-		case .failure(let id, let error):
-			try container.encode(id, forKey: .id)
+		try container.encode(id, forKey: .id)
+
+		switch self.content {
+		case .failure(let error):
 			try container.encode(error, forKey: .error)
-		case .result(let id, let value):
-			try container.encode(id, forKey: .id)
+		case .success(let value):
 			try container.encode(value, forKey: .result)
 		}
 	}
@@ -280,14 +265,5 @@ extension JSONRPCResponse: Encodable where T: Encodable {
 extension JSONRPCResponse: Equatable where T: Equatable {}
 extension JSONRPCResponse: Hashable where T: Hashable {}
 extension JSONRPCResponse: Sendable where T: Sendable {}
-
-extension JSONRPCResponse {
-    static func internalError(id: JSONId, message: String, data: JSONValue = nil) -> JSONRPCResponse<JSONValue> {
-        let error = AnyJSONRPCResponseError(code: JSONRPCErrors.internalError,
-                                            message: message,
-                                            data: data)
-        return .failure(id, error)
-    }
-}
 
 public typealias AnyJSONRPCResponse = JSONRPCResponse<JSONValue>

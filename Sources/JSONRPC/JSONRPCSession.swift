@@ -1,8 +1,5 @@
 import Foundation
 
-#if compiler(>=5.9)
-
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public struct DataChannel: Sendable {
 	public typealias WriteHandler = @Sendable (Data) async throws -> Void
 	public typealias DataSequence = AsyncStream<Data>
@@ -16,7 +13,6 @@ public struct DataChannel: Sendable {
 	}
 }
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension DataChannel {
 	public static func transportChannel<Transport: DataTransport>(with transport: Transport) -> DataChannel where Transport: Sendable {
 		let framing = SeperatedHTTPHeaderMessageFraming()
@@ -34,10 +30,39 @@ extension DataChannel {
 	}
 }
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+private struct JSONRPCRequestReplyEncodableShim: Encodable {
+	let id: JSONId
+	let result: JSONRPCSession.RequestResult
+
+	private enum CodingKeys: String, CodingKey {
+		case id
+		case error
+		case result
+		case jsonrpc
+	}
+
+	func encode(to encoder: Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+
+		try container.encode("2.0", forKey: .jsonrpc)
+
+		try container.encode(id, forKey: .id)
+
+		switch result {
+		case .failure(let error):
+			try container.encode(error, forKey: .error)
+		case .success(let value):
+			try container.encode(value, forKey: .result)
+		}
+	}
+}
+
+#if compiler(>=5.9)
 public actor JSONRPCSession {
+	public typealias RequestResult = Result<Encodable & Sendable, AnyJSONRPCResponseError>
+	public typealias RequestHandler = @Sendable (RequestResult) async -> Void
 	public typealias NotificationSequence = AsyncStream<(AnyJSONRPCNotification, Data)>
-	public typealias RequestSequence = AsyncStream<(AnyJSONRPCRequest, Data)>
+	public typealias RequestSequence = AsyncStream<(AnyJSONRPCRequest, RequestHandler, Data)>
 	public typealias DataResult = Result<(AnyJSONRPCResponse, Data), Error>
 	private typealias MessageResponder = @Sendable (DataResult) -> Void
 
@@ -131,7 +156,19 @@ public actor JSONRPCSession {
 		case .request(let id, let method, let params):
 			let req = AnyJSONRPCRequest(id: id, method: method, params: params)
 
-			requestContinuation.yield((req, data))
+			let handler: RequestHandler = { [weak self] in
+				let resp = JSONRPCRequestReplyEncodableShim(id: id, result: $0)
+
+				Task { [weak self] in
+					do {
+						try await self?.encodeAndWrite(resp)
+					} catch {
+						print("failed to encode and write data: \(error)")
+					}
+				}
+			}
+
+			requestContinuation.yield((req, handler, data))
 		case .undecodableId(let error):
 			print("failed to decode: \(error)")
 		}
@@ -150,7 +187,6 @@ public actor JSONRPCSession {
 	}
 }
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension JSONRPCSession {
 	public func sendDataRequest<Request>(_ params: Request, method: String) async throws -> (AnyJSONRPCResponse, Data)
 	where Request: Encodable {
@@ -174,14 +210,35 @@ extension JSONRPCSession {
 		return try decoder.decode(JSONRPCResponse<Response>.self, from: data)
 	}
 
-	public func sendNotification<Note>(_ params: Note?, method: String) async throws where Note: Encodable {
+	public func sendNotification<Note>(_ params: Note, method: String) async throws where Note: Encodable {
 		let notification = JSONRPCNotification(method: method, params: params)
 		
 		try await encodeAndWrite(notification)
 	}
+
+	public func sendNotification(method: String) async throws {
+		let unusedParams: String? = nil
+
+		try await sendNotification(unusedParams, method: method)
+	}
+
+	public func response<Request, Response>(to method: String, params: Request) async throws -> Response
+	where Request: Encodable, Response: Decodable {
+		let (_, data) = try await sendDataRequest(params, method: method)
+
+		let response = try decoder.decode(JSONRPCResponse<Response>.self, from: data)
+
+		return try response.content.get()
+	}
+
+	public func response<Response>(to method: String) async throws -> Response
+	where Response: Decodable {
+		let unusedParams: String? = nil
+
+		return try await response(to: method, params: unusedParams)
+	}
 }
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension JSONRPCSession {
 	private func sendDataRequest<Request>(_ params: Request, method: String, responseHandler: @escaping MessageResponder)
 	where Request: Encodable {
