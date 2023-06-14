@@ -98,6 +98,8 @@ public actor JSONRPCSession {
 	}
 
 	deinit {
+		requestContinuation.finish()
+		notificationContinuation.finish()
 		readTask?.cancel()
 
 		for (_, responder) in responders {
@@ -122,10 +124,10 @@ public actor JSONRPCSession {
 	private func startMonitoringChannel() {
 		precondition(readTask == nil)
 
-		let task = Task { [weak self] in
-			guard let channel = self?.channel else { return }
+		let dataSequence = channel.dataSequence
 
-			for await data in channel.dataSequence {
+		let task = Task { [weak self] in
+			for await data in dataSequence {
 				await self?.handleData(data)
 			}
 		}
