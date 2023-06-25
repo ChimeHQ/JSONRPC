@@ -25,7 +25,7 @@ extension DataChannel {
 		}
 
 		return DataChannel(writeHandler: { data in
-			transport.write(data)
+			messageTransport.write(data)
 		}, dataSequence: stream)
 	}
 }
@@ -74,6 +74,7 @@ public actor JSONRPCSession {
 	private var notificationContinuation: NotificationSequence.Continuation
 	private var requestContinuation: RequestSequence.Continuation
 	private var responders = [String: MessageResponder]()
+	private var channelClosed = false
 
 	public let notificationSequence: NotificationSequence
 	public let requestSequence: RequestSequence
@@ -116,9 +117,21 @@ public actor JSONRPCSession {
 	}
 
 	private func encodeAndWrite<T>(_ value: T) async throws where T: Encodable {
+		if channelClosed {
+			throw ProtocolTransportError.dataStreamClosed
+		}
+		
 		let data = try encoder.encode(value)
 
 		try await channel.writeHandler(data)
+	}
+
+	private func readSequenceFinished() {
+		for (_, responder) in responders {
+			responder(.failure(ProtocolTransportError.dataStreamClosed))
+		}
+
+		channelClosed = true
 	}
 
 	private func startMonitoringChannel() {
@@ -130,6 +143,8 @@ public actor JSONRPCSession {
 			for await data in dataSequence {
 				await self?.handleData(data)
 			}
+
+			await self?.readSequenceFinished()
 		}
 
 		self.readTask = task
@@ -192,6 +207,10 @@ public actor JSONRPCSession {
 extension JSONRPCSession {
 	public func sendDataRequest<Request>(_ params: Request, method: String) async throws -> (AnyJSONRPCResponse, Data)
 	where Request: Encodable {
+		if channelClosed {
+			throw ProtocolTransportError.dataStreamClosed
+		}
+
 		return try await withCheckedThrowingContinuation({ continuation in
 			// make sure not to capture self
 			self.sendDataRequest(params, method: method) { [weak self] result in
@@ -213,6 +232,10 @@ extension JSONRPCSession {
 	}
 
 	public func sendNotification<Note>(_ params: Note, method: String) async throws where Note: Encodable {
+		if channelClosed {
+			throw ProtocolTransportError.dataStreamClosed
+		}
+
 		let notification = JSONRPCNotification(method: method, params: params)
 		
 		try await encodeAndWrite(notification)
