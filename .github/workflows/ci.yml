@@ -12,24 +12,24 @@ env:
   DEVELOPER_DIR: /Applications/Xcode_15.0.app/Contents/Developer
 
 jobs:
-  test:
-    name: Test
-    runs-on: macOS-13
-    strategy:
-      matrix:
-        destination:
-          - "platform=macOS"
-          - "platform=iOS Simulator,name=iPhone 12"
+  - test:
+      name: Test
+      runs-on: macOS-13
+      strategy:
+        matrix:
+          destination:
+            - "platform=macOS"
+            - "platform=iOS Simulator,name=iPhone 12"
 
-    steps:
-      - uses: actions/checkout@v3
-      - name: Test platform ${{ matrix.destination }}
-        run: set -o pipefail && xcodebuild -scheme JSONRPC -destination "${{ matrix.destination }}" test | xcpretty
+      steps:
+        - uses: actions/checkout@v3
+        - name: Test platform ${{ matrix.destination }}
+          run: set -o pipefail && xcodebuild -scheme JSONRPC -destination "${{ matrix.destination }}" test | xcpretty
 
-  test:
-    name: Test Linux
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: swift test
-        run: swift test
+  - test:
+      name: Test Linux
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v3
+        - name: swift test
+          run: swift test
