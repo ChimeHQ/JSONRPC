@@ -135,7 +135,7 @@ extension JSONRPCNotification: Sendable where T: Sendable {}
 
 public typealias AnyJSONRPCNotification = JSONRPCNotification<JSONValue>
 
-public struct JSONRPCResponseError<T>: Error {
+public struct JSONRPCResponseError<T: Sendable>: Error {
     public var code: Int
     public var message: String
     public var data: T?
@@ -151,7 +151,6 @@ extension JSONRPCResponseError: Encodable where T: Encodable {}
 extension JSONRPCResponseError: Decodable where T: Decodable {}
 extension JSONRPCResponseError: Equatable where T: Equatable {}
 extension JSONRPCResponseError: Hashable where T: Hashable {}
-extension JSONRPCResponseError: Sendable where T: Sendable {}
 
 public typealias AnyJSONRPCResponseError = JSONRPCResponseError<JSONValue>
 
