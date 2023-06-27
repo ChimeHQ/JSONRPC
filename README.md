@@ -4,7 +4,12 @@
 [![Documentation][documentation badge]][documentation]
 
 # JSONRPC
-A simple Swift library for JSON-RPC. It features strong type-safety and makes no assumptions about the underlying transport stream.
+A simple Swift library for JSON-RPC
+
+Features:
+- type-safety
+- flexible data transport support
+- concurrency support
 
 ## Integration
 
@@ -16,37 +21,28 @@ dependencies: [
 ]
 ```
 
-## Classes
-
-### ProtocolTransport
-
-This is the core class for using the protocol. It supports sending and receiving generic messages and notifications, as well as responding to protocol-level errors.
+## Usage
 
 ```swift
-// takes a struct with all of the handler functions needed.
-public func setHandlers(_ handlers: Handlers)
+let channel = DataChannel(...)
+let session = JSONRPCSession(channel: channel)
 
-public func sendDataRequest<T>(_ params: T, method: String, responseHandler: @escaping (DataResult) -> Void) where T: Encodable
-public func sendDataRequest<T>(_ params: T, method: String) async throws -> (AnyJSONRPCResponse, Data) where T: Encodable
+let params = "hello" // any Encodable
+let response: Decodable = try await session.sendRequest(params, method: "my_method")
 
-public func sendRequest<T, U>(_ params: T, method: String, responseHandler: @escaping (ResponseResult<U>) -> Void) where T: Encodable, U: Decodable
-public func sendRequest<T, U>(_ params: T, method: String) async throws -> JSONRPCResponse<U> where T: Encodable, U: Decodable
+Task {
+    for await (request, handler, data) in session.requestSequence {
+        // inspect request, possibly re-decode with more specific type,
+        // and reply using the handler
+    }
+}
 
-public func sendNotification<T>(_ params: T?, method: String, completionHandler: @escaping (Error?) -> Void = {_ in }) where T: Encodable
-public func sendNotification<T>(_ params: T?, method: String) async throws where T: Encodable
+Task {
+    for await (notification, data) in session.notificationSequence {
+        // inspect notification
+    }
+}
 ```
-
-### StdioDataTransport
-
-This is a concrete implementation of the `DataTransport` protocol, which passes data across stdio. 
-
-### MessageTransport
-
-This gives you a way to frame/delimit messages in the wire protocol. It is optional, in case you don't need/want to use that functionality. It relies on the `MessageProtocol` protocol.
-
-### SeperatedHTTPHeaderMessageProtocol
-
-A concrete `MessageProtocol` that uses HTTP headers. It requires at least `Content-Length`, and by default expects all fields to be separated by `\r\n`.
 
 ### Suggestions or Feedback
 

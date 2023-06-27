@@ -1,36 +1,5 @@
 import Foundation
 
-public struct DataChannel: Sendable {
-	public typealias WriteHandler = @Sendable (Data) async throws -> Void
-	public typealias DataSequence = AsyncStream<Data>
-
-	public let writeHandler: WriteHandler
-	public let dataSequence: DataSequence
-
-	public init(writeHandler: @escaping WriteHandler, dataSequence: DataSequence) {
-		self.writeHandler = writeHandler
-		self.dataSequence = dataSequence
-	}
-}
-
-extension DataChannel {
-	public static func transportChannel<Transport: DataTransport>(with transport: Transport) -> DataChannel where Transport: Sendable {
-		let framing = SeperatedHTTPHeaderMessageFraming()
-		let messageTransport = MessageTransport(dataTransport: transport, messageProtocol: framing)
-
-		let stream = DataSequence { continuation in
-			messageTransport.setReaderHandler { data in
-				continuation.yield(data)
-			}
-		}
-
-		return DataChannel(writeHandler: { data in
-			messageTransport.write(data)
-		}, dataSequence: stream)
-	}
-}
-
-#if compiler(>=5.9)
 private struct JSONRPCRequestReplyEncodableShim: Encodable {
 	let id: JSONId
 	let result: JSONRPCSession.RequestResult
@@ -63,6 +32,7 @@ public actor JSONRPCSession {
 	public typealias RequestHandler = @Sendable (RequestResult) async -> Void
 	public typealias NotificationSequence = AsyncStream<(AnyJSONRPCNotification, Data)>
 	public typealias RequestSequence = AsyncStream<(AnyJSONRPCRequest, RequestHandler, Data)>
+	public typealias ErrorSequence = AsyncStream<Error>
 	public typealias DataResult = Result<(AnyJSONRPCResponse, Data), Error>
 	private typealias MessageResponder = @Sendable (DataResult) -> Void
 
@@ -71,27 +41,41 @@ public actor JSONRPCSession {
 	private let encoder = JSONEncoder()
 	private let channel: DataChannel
 	private var readTask: Task<Void, Never>?
-	private var notificationContinuation: NotificationSequence.Continuation
-	private var requestContinuation: RequestSequence.Continuation
+	private let notificationContinuation: NotificationSequence.Continuation
+	private let requestContinuation: RequestSequence.Continuation
+	private let errorContinuation: ErrorSequence.Continuation
 	private var responders = [String: MessageResponder]()
 	private var channelClosed = false
 
 	public let notificationSequence: NotificationSequence
 	public let requestSequence: RequestSequence
+	public let errorSequence: ErrorSequence
 
 	public init(channel: DataChannel) {
 		self.id = 1
 		self.channel = channel
 
-		let notePair = NotificationSequence.makeStream()
+		// this is annoying, but temporary
+#if compiler(>=5.9)
+		(self.notificationSequence, self.notificationContinuation) = NotificationSequence.makeStream()
+		(self.requestSequence, self.requestContinuation) = RequestSequence.makeStream()
+		(self.errorSequence, self.errorContinuation) = ErrorSequence.makeStream()
+#else
+		var escapedNoteContinuation: NotificationSequence.Continuation?
 
-		self.notificationSequence = notePair.stream
-		self.notificationContinuation = notePair.continuation
+		self.notificationSequence = NotificationSequence { escapedNoteContinuation = $0 }
+		self.notificationContinuation = escapedNoteContinuation!
 
-		let requestPair = RequestSequence.makeStream()
+		var escapedRequestContinuation: RequestSequence.Continuation?
 
-		self.requestSequence = requestPair.stream
-		self.requestContinuation = requestPair.continuation
+		self.requestSequence = RequestSequence { escapedRequestContinuation = $0 }
+		self.requestContinuation = escapedRequestContinuation!
+
+		var escapedErrorContinuation: ErrorSequence.Continuation?
+
+		self.errorSequence = ErrorSequence { escapedErrorContinuation = $0 }
+		self.errorContinuation = escapedErrorContinuation!
+#endif
 
 		Task {
 			await startMonitoringChannel()
@@ -154,7 +138,7 @@ public actor JSONRPCSession {
 		do {
 			try self.decodeAndDispatch(data: data)
 		} catch {
-			print("unable to process data: \(error)")
+			errorContinuation.yield(error)
 		}
 	}
 
@@ -180,14 +164,14 @@ public actor JSONRPCSession {
 					do {
 						try await self?.encodeAndWrite(resp)
 					} catch {
-						print("failed to encode and write data: \(error)")
+						self?.errorContinuation.yield(error)
 					}
 				}
 			}
 
 			requestContinuation.yield((req, handler, data))
 		case .undecodableId(let error):
-			print("failed to decode: \(error)")
+			errorContinuation.yield(error)
 		}
 	}
 
@@ -288,4 +272,3 @@ extension JSONRPCSession {
 	}
 }
 
-#endif

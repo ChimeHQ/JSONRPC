@@ -3,6 +3,7 @@ import Foundation
 import os.log
 #endif
 
+/// This is a concrete implementation of the `DataTransport` protocol, which passes data across stdio.
 public class StdioDataTransport: DataTransport, @unchecked Sendable {
     public let stdinPipe: Pipe
     public let stdoutPipe: Pipe

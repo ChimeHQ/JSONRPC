@@ -10,6 +10,7 @@ public enum ProtocolTransportError: Error {
     case dataStreamClosed
 }
 
+@available(*, deprecated, message: "Please migrate to JSONRPCSession")
 public class ProtocolTransport: @unchecked Sendable {
 	public struct Handlers {
 		public typealias RequestHandler = (AnyJSONRPCRequest, Data, @escaping (AnyJSONRPCResponse) -> Void) -> Void
@@ -73,6 +74,7 @@ public class ProtocolTransport: @unchecked Sendable {
 	}
 }
 
+@available(*, deprecated, message: "Please migrate to JSONRPCSession")
 extension ProtocolTransport  {
 	public func sendDataRequest<T>(_ params: T, method: String, responseHandler: @escaping (DataResult) -> Void) where T: Encodable {
 		queue.async {
@@ -155,6 +157,7 @@ extension ProtocolTransport  {
 	}
 }
 
+@available(*, deprecated, message: "Please migrate to JSONRPCSession")
 extension ProtocolTransport {
     private func generateID() -> JSONId {
         let issuedId = JSONId.numericId(id)
