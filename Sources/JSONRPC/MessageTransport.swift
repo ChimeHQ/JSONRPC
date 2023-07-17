@@ -1,10 +1,12 @@
 import Foundation
 
+@available(*, deprecated, message: "please migrate to JSONRPCSession")
 public protocol MessageFraming {
     func nextMessageRange(in data: Data) -> Range<Data.Index>?
     func frameData(_ data: Data) -> Data
 }
 
+@available(*, deprecated, message: "please migrate to JSONRPCSession")
 public class MessageTransport {
     private let dataTransport: DataTransport
     private var buffer: Data
@@ -62,6 +64,7 @@ public class MessageTransport {
     }
 }
 
+@available(*, deprecated, message: "please migrate to JSONRPCSession")
 extension MessageTransport: DataTransport {
     public func write(_ data: Data) {
         let messageData = messageProtocol.frameData(data)

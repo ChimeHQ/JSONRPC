@@ -3,6 +3,7 @@ import Foundation
 import os.log
 #endif
 
+@available(*, deprecated, message: "Please migrate to JSONRPCSession")
 /// This is a concrete implementation of the `DataTransport` protocol, which passes data across stdio.
 public class StdioDataTransport: DataTransport, @unchecked Sendable {
     public let stdinPipe: Pipe

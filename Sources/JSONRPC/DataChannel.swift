@@ -1,5 +1,6 @@
 import Foundation
 
+/// Provides reading and writing facilities.
 public struct DataChannel: Sendable {
 	public typealias WriteHandler = @Sendable (Data) async throws -> Void
 	public typealias DataSequence = AsyncStream<Data>
@@ -14,18 +15,31 @@ public struct DataChannel: Sendable {
 }
 
 extension DataChannel {
-	public static func transportChannel<Transport: DataTransport>(with transport: Transport) -> DataChannel where Transport: Sendable {
-		let framing = SeperatedHTTPHeaderMessageFraming()
-		let messageTransport = MessageTransport(dataTransport: transport, messageProtocol: framing)
+	/// Create a passthrough `DataChannel` that invokes a closure on read and write.
+	public static func tap(
+		channel: DataChannel,
+		onRead: @Sendable @escaping (Data) async -> Void,
+		onWrite: @Sendable @escaping (Data) async -> Void
+	) -> DataChannel {
 
-		let stream = DataSequence { continuation in
-			messageTransport.setReaderHandler { data in
-				continuation.yield(data)
-			}
+		let writeHandler: DataChannel.WriteHandler = {
+			await onWrite($0)
+
+			try await channel.writeHandler($0)
 		}
 
-		return DataChannel(writeHandler: { data in
-			messageTransport.write(data)
-		}, dataSequence: stream)
+		var iterator = channel.dataSequence.makeAsyncIterator()
+		let dataStream = AsyncStream<Data> {
+			let data = await iterator.next()
+
+			if let data = data {
+				await onRead(data)
+			}
+
+			return data
+		}
+
+		return DataChannel(writeHandler: writeHandler,
+						   dataSequence: dataStream)
 	}
 }

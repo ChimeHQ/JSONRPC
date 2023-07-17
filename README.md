@@ -23,6 +23,8 @@ dependencies: [
 
 ## Usage
 
+The core type you'll use is `JSONRPCSession`. It requires you set up a `DataChannel` object that handles reading and writing raw data.
+
 ```swift
 let channel = DataChannel(...)
 let session = JSONRPCSession(channel: channel)

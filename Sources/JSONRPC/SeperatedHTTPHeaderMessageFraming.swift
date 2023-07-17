@@ -3,6 +3,7 @@ import Foundation
 /// A concrete `MessageFraming` implemenation that uses HTTP headers.
 ///
 /// It requires at least `Content-Length`, and by default expects all fields to be separated by `\r\n`.
+@available(*, deprecated, message: "Please migrate to JSONRPCSession")
 public struct SeperatedHTTPHeaderMessageFraming {
     private let partSeperator: Data
     private let contentSeperator: Data
