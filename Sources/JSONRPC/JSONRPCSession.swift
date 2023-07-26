@@ -115,6 +115,7 @@ public actor JSONRPCSession {
 			responder(.failure(ProtocolTransportError.dataStreamClosed))
 		}
 
+		self.responders.removeAll()
 		channelClosed = true
 	}
 
