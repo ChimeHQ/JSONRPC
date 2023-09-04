@@ -250,25 +250,30 @@ extension JSONRPCSession {
 }
 
 extension JSONRPCSession {
-	private func sendDataRequest<Request>(_ params: Request, method: String, responseHandler: @escaping MessageResponder)
-	where Request: Encodable {
+	private func sendDataRequest<Request>(
+		_ params: Request, method: String,
+		responseHandler: @escaping MessageResponder
+	) where Request: Encodable {
 		let issuedId = generateID()
 
 		let request = JSONRPCRequest(id: issuedId, method: method, params: params)
+
+		// make sure to store the responser *first*, before sending the message. This prevents a race where the response comes in so fast we aren't yet waiting for it
+		let key = issuedId.description
+
+		precondition(responders[key] == nil)
+
+		self.responders[key] = responseHandler
 
 		Task {
 			do {
 				try await encodeAndWrite(request)
 			} catch {
 				responseHandler(.failure(error))
+
+				self.responders[key] = nil
 				return
 			}
-			
-			let key = issuedId.description
-			
-			precondition(responders[key] == nil)
-			
-			self.responders[key] = responseHandler
 		}
 	}
 }
