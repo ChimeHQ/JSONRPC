@@ -5,6 +5,7 @@ import JSONRPC
 
 final class JSONRPCSessionTests: XCTestCase {
 	typealias TestResponse = JSONRPCResponse<String?>
+	typealias TestNotification = JSONRPCNotification<String>
 
 	func testResultResponse() async throws {
 		let pair = DataChannel.DataSequence.makeStream()
@@ -52,24 +53,31 @@ final class JSONRPCSessionTests: XCTestCase {
 	}
 
 	func testSendNotification() async throws {
-		let dataTransport = MockDataTransport()
-		let transport = ProtocolTransport(dataTransport: dataTransport)
+		let pair = DataChannel.DataSequence.makeStream()
+
+		let params = "hello"
+		let method = "mynotification"
+
+		let result = TestNotification(method: method, params: params)
 
 		let expectation = XCTestExpectation(description: "Notification Message")
 
-		let params = "hello"
+		let channel = DataChannel(
+			writeHandler: { data in
+				// have to decode this here to make sure json key ordering does not matter
+				let notification = try JSONDecoder().decode(TestNotification.self, from: data)
+				XCTAssertEqual(notification, result)
 
-		transport.sendNotification(params, method: "mynotification") { (error) in
-			XCTAssertNil(error)
-			expectation.fulfill()
-		}
+				expectation.fulfill()
+			},
+			dataSequence: pair.stream
+		)
 
-		wait(for: [expectation], timeout: 1.0)
+		let session = JSONRPCSession(channel: channel)
 
-		let result = JSONRPCNotification(method: "mynotification", params: params)
-		let resultData = try JSONEncoder().encode(result)
+		try await session.sendNotification(params, method: method)
 
-		assertDataArraysEquals(dataTransport.writtenData, [resultData])
+		await fulfillment(of: [expectation], timeout: 1.0)
 	}
 }
 
