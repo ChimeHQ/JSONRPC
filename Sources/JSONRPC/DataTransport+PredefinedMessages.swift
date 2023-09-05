@@ -2,25 +2,58 @@ import Foundation
 
 #if compiler(>=5.9)
 
-actor PredefinedMessageRelay {
-	private var messages: [Data]
+public enum ScriptedMessage: Hashable, Sendable {
+	case afterWrite(Data)
+	case immediate(Data)
+}
+
+actor ScriptedMessageRelay {
+	private var messages: [ScriptedMessage]
 	private let continuation: DataChannel.DataSequence.Continuation
 	public nonisolated let sequence: DataChannel.DataSequence
 
-	init(messages: [Data]) {
+	init(messages: [ScriptedMessage]) async {
 		self.messages = messages
 
 		(self.sequence, self.continuation) = DataChannel.DataSequence.makeStream()
+
+		deliverNextIfNeeded()
 	}
 
-	init<T: Encodable>(content: [T]) throws {
-		let messages = try content.map { try JSONEncoder().encode($0) }
+	private func deliverNextIfNeeded() {
+		guard let next = messages.first else {
+			continuation.finish()
+			return
+		}
 
-		self.init(messages: messages)
+		switch next {
+		case .immediate(let data):
+			messages.removeFirst()
+
+			continuation.yield(data)
+			deliverNextIfNeeded()
+		case .afterWrite:
+			break
+		}
+
 	}
 
-	func write() {
-		continuation.yield(messages.removeFirst())
+	func onWrite() {
+		guard let next = messages.first else {
+			continuation.finish()
+			return
+		}
+
+		switch next {
+		case let .afterWrite(data):
+			messages.removeFirst()
+
+			continuation.yield(data)
+
+			deliverNextIfNeeded()
+		case .immediate:
+			fatalError("this should never occur")
+		}
 	}
 }
 
@@ -28,13 +61,13 @@ extension DataChannel {
 	/// A channel that delivers a static set of messages.
 	///
 	/// This will delivery messages in order, after each `write` is performed. Useful for testing.
-	public static func predefinedMessagesChannel<T: Encodable & Sendable>(_ content: [T]) throws -> DataChannel {
-		let relay = try PredefinedMessageRelay(content: content)
+	public static func predefinedMessagesChannel(with messages: [ScriptedMessage]) async -> DataChannel {
+		let relay = await ScriptedMessageRelay(messages: messages)
 
 		return DataChannel(
 			writeHandler: { _ in
 				// strong-ref here to keep relay alive
-				await relay.write()
+				await relay.onWrite()
 			},
 			dataSequence: relay.sequence)
 	}
