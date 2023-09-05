@@ -13,11 +13,9 @@ Features:
 
 ## Integration
 
-### Swift Package Manager
-
 ```swift
 dependencies: [
-    .package(url: "https://github.com/ChimeHQ/JSONRPC")
+    .package(url: "https://github.com/ChimeHQ/JSONRPC", from: "0.8.0)
 ]
 ```
 
@@ -46,11 +44,15 @@ Task {
 }
 ```
 
-### Suggestions or Feedback
+## Contributing and Collaboration
 
-We'd love to hear from you! Get in touch via an issue or pull request.
+I'd love to hear from you! Get in touch via an issue or pull request.
 
-Please note that this project is released with a [Contributor Code of Conduct](CODE_OF_CONDUCT.md). By participating in this project you agree to abide by its terms.
+I prefer collaboration, and would love to find ways to work together if you have a similar project.
+
+I prefer indentation with tabs for improved accessibility. But, I'd rather you use the system you want and make a PR than hesitate because of whitespace.
+
+By participating in this project you agree to abide by the [Contributor Code of Conduct](CODE_OF_CONDUCT.md).
 
 [build status]: https://github.com/ChimeHQ/JSONRPC/actions
 [build status badge]: https://github.com/ChimeHQ/JSONRPC/workflows/CI/badge.svg

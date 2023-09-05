@@ -1,5 +1,12 @@
 import Foundation
 
+enum ProtocolTransportError: Error {
+	case undecodableMesssage(Data)
+	case unexpectedResponse(Data)
+	case abandonedRequest
+	case dataStreamClosed
+}
+
 private struct JSONRPCRequestReplyEncodableShim: Encodable {
 	let id: JSONId
 	let result: JSONRPCSession.RequestResult
