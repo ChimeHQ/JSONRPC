@@ -24,7 +24,7 @@ extension DataChannel {
 	public static func stdioPipe() -> DataChannel {
 
 		let writeHandler: DataChannel.WriteHandler = {
-      FileHandle.standardOutput.write($0)
+			FileHandle.standardOutput.write($0)
 		}
 
 		return DataChannel(writeHandler: writeHandler, dataSequence: FileHandle.standardInput.dataStream)
