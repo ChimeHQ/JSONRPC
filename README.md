@@ -44,6 +44,23 @@ Task {
 }
 ```
 
+
+### DataChannel
+
+The closures on the `DataChannel` allow different transport mechanisms to be used. The `JSONRPC` package provides a few basic variants:
+
+- Predefined messages channel
+  - A channel that delivers a static set of messages
+  - Usage: `let channel = await DataChannel.predefinedMessagesChannel(with: messages)`
+- Stdio channel
+  - Using stdout + stdin as message transport.
+  - Note: When using this transport, make sure no non-protocol messages are sent to `stdout`, eg using `print`
+  - Usage: `let channel = DataChannel.stdioPipe()`
+- Actor channel
+  - Using swift actors to pass messages.
+  - Can eg be useful for testing, where both client and server are implemented in swift and running in the same process.
+  - Usage: `let (clientChannel, serverChannel) = DataChannel.withDataActor()`
+
 ## Contributing and Collaboration
 
 I'd love to hear from you! Get in touch via an issue or pull request.
