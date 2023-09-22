@@ -76,10 +76,10 @@ extension DataChannel {
 		return (clientChannel, serverChannel)
 	}
 
-  // Default actor channel with Array queue storage
+	// Default actor channel with Array queue storage
 	public static func withDataActor() -> (clientChannel: DataChannel, serverChannel: DataChannel) {
-    return withDataActor(queueProvider: { Array<Data>() })
-  }
+		return withDataActor(queueProvider: { Array<Data>() })
+	}
 
 	private static func makeChannel<Queue>(
 		sender: DataActor<Queue>,
