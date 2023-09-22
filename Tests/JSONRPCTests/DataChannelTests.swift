@@ -1,16 +1,6 @@
 import XCTest
 @testable import JSONRPC
 
-extension Array : ReceiveQueue where Element == Data {
-	public mutating func popFirst() -> Data? {
-		if isEmpty == true {
-			return nil
-		}
-
-		return self.removeFirst()
-	}
-}
-
 final class DataChannelTests: XCTestCase {
 	func testEmptyChannelBlocking() async throws {
 		let channel = DataActor(queue: Array())
@@ -44,7 +34,7 @@ final class DataChannelTests: XCTestCase {
 	}
 
 	func testBidirectionalChannel() async throws {
-		let (clientChannel, serverChannel) = DataChannel.withDataActor(queueProvider: { Array<Data>() })
+		let (clientChannel, serverChannel) = DataChannel.withDataActor()
 		let msg = "hello"
 		try await clientChannel.writeHandler(msg.data(using: .utf8)!)
 		var it = serverChannel.dataSequence.makeAsyncIterator();
@@ -55,7 +45,7 @@ final class DataChannelTests: XCTestCase {
 	}
 
 	func testSimpleRPC() {
-		let (_, serverChannel) = DataChannel.withDataActor(queueProvider: { Array<Data>() })
+		let (_, serverChannel) = DataChannel.withDataActor()
 		let _ = JSONRPCSession(channel: serverChannel)
 		// TODO...
 	}

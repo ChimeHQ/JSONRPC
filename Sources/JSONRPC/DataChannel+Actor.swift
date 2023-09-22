@@ -5,6 +5,16 @@ public protocol ReceiveQueue : Collection where Element == Data {
 	mutating func popFirst() -> Element?
 }
 
+extension Array : ReceiveQueue where Element == Data {
+	public mutating func popFirst() -> Data? {
+		if isEmpty == true {
+			return nil
+		}
+
+		return self.removeFirst()
+	}
+}
+
 actor DataActor<Queue> where Queue : ReceiveQueue {
 	private var queue: Queue
 	private var continuation: CheckedContinuation<Data, Never>?
@@ -65,6 +75,11 @@ extension DataChannel {
 
 		return (clientChannel, serverChannel)
 	}
+
+  // Default actor channel with Array queue storage
+	public static func withDataActor() -> (clientChannel: DataChannel, serverChannel: DataChannel) {
+    return withDataActor(queueProvider: { Array<Data>() })
+  }
 
 	private static func makeChannel<Queue>(
 		sender: DataActor<Queue>,
