@@ -93,8 +93,9 @@ final class JSONRPCSessionTests: XCTestCase {
 		let expectation = XCTestExpectation(description: "Notification Message")
 
 		Task {
-			for await notePair in await session.notificationSequence {
-				let notification = try JSONDecoder().decode(TestNotification.self, from: notePair.1)
+			for await event in await session.eventSequence {
+				guard case let .notification(_, data) = event else { continue }
+				let notification = try JSONDecoder().decode(TestNotification.self, from: data)
 				XCTAssertEqual(notification, result)
 
 				expectation.fulfill()
@@ -122,8 +123,9 @@ final class JSONRPCSessionTests: XCTestCase {
 		let notificationExpectation = XCTestExpectation(description: "Notification Message")
 
 		Task {
-			for await notePair in await session.notificationSequence {
-				let notification = try JSONDecoder().decode(TestNotification.self, from: notePair.1)
+			for await event in await session.eventSequence {
+				guard case let .notification(_, data) = event else { continue }
+				let notification = try JSONDecoder().decode(TestNotification.self, from: data)
 				XCTAssertEqual(notification, expectedNotification)
 
 				notificationExpectation.fulfill()
