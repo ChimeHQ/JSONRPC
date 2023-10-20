@@ -4,7 +4,7 @@
 [![Documentation][documentation badge]][documentation]
 
 # JSONRPC
-A simple Swift library for JSON-RPC
+A simple Swift library for [JSON-RPC](https://www.jsonrpc.org)
 
 Features:
 - type-safety
