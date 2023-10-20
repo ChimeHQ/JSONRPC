@@ -9,7 +9,7 @@ enum ProtocolTransportError: Error {
 
 private struct JSONRPCRequestReplyEncodableShim: Encodable {
 	let id: JSONId
-	let result: JSONRPCSession.RequestResult
+	let result: JSONRPCEvent.RequestResult
 
 	private enum CodingKeys: String, CodingKey {
 		case id
@@ -34,12 +34,17 @@ private struct JSONRPCRequestReplyEncodableShim: Encodable {
 	}
 }
 
-public actor JSONRPCSession {
+public enum JSONRPCEvent: Sendable {
 	public typealias RequestResult = Result<Encodable & Sendable, AnyJSONRPCResponseError>
 	public typealias RequestHandler = @Sendable (RequestResult) async -> Void
-	public typealias NotificationSequence = AsyncStream<(AnyJSONRPCNotification, Data)>
-	public typealias RequestSequence = AsyncStream<(AnyJSONRPCRequest, RequestHandler, Data)>
-	public typealias ErrorSequence = AsyncStream<Error>
+
+	case request(AnyJSONRPCRequest, RequestHandler, Data)
+	case notification(AnyJSONRPCNotification, Data)
+	case error(Error)
+}
+
+public actor JSONRPCSession {
+	public typealias EventSequence = AsyncStream<JSONRPCEvent>
 	public typealias DataResult = Result<(AnyJSONRPCResponse, Data), Error>
 	private typealias MessageResponder = @Sendable (DataResult) -> Void
 
@@ -48,41 +53,25 @@ public actor JSONRPCSession {
 	private let encoder = JSONEncoder()
 	private let channel: DataChannel
 	private var readTask: Task<Void, Never>?
-	private let notificationContinuation: NotificationSequence.Continuation
-	private let requestContinuation: RequestSequence.Continuation
-	private let errorContinuation: ErrorSequence.Continuation
+	private let eventContinuation: EventSequence.Continuation
 	private var responders = [String: MessageResponder]()
 	private var channelClosed = false
 
-	public let notificationSequence: NotificationSequence
-	public let requestSequence: RequestSequence
-	public let errorSequence: ErrorSequence
+	public let eventSequence: EventSequence
 
 	public init(channel: DataChannel) {
 		self.id = 1
 		self.channel = channel
 
 		// this is annoying, but temporary
-#if compiler(>=5.9)
-		(self.notificationSequence, self.notificationContinuation) = NotificationSequence.makeStream()
-		(self.requestSequence, self.requestContinuation) = RequestSequence.makeStream()
-		(self.errorSequence, self.errorContinuation) = ErrorSequence.makeStream()
-#else
-		var escapedNoteContinuation: NotificationSequence.Continuation?
+//#if compiler(>=5.9)
+//		(self.eventSequence, self.eventContinuation) = EventSequence.makeStream()
+//#else
+		var escapedEventContinuation: EventSequence.Continuation?
 
-		self.notificationSequence = NotificationSequence { escapedNoteContinuation = $0 }
-		self.notificationContinuation = escapedNoteContinuation!
-
-		var escapedRequestContinuation: RequestSequence.Continuation?
-
-		self.requestSequence = RequestSequence { escapedRequestContinuation = $0 }
-		self.requestContinuation = escapedRequestContinuation!
-
-		var escapedErrorContinuation: ErrorSequence.Continuation?
-
-		self.errorSequence = ErrorSequence { escapedErrorContinuation = $0 }
-		self.errorContinuation = escapedErrorContinuation!
-#endif
+		self.eventSequence = EventSequence { escapedEventContinuation = $0 }
+		self.eventContinuation = escapedEventContinuation!
+//#endif
 
 		Task {
 			await startMonitoringChannel()
@@ -90,8 +79,7 @@ public actor JSONRPCSession {
 	}
 
 	deinit {
-		requestContinuation.finish()
-		notificationContinuation.finish()
+		eventContinuation.finish()
 		readTask?.cancel()
 
 		for (_, responder) in responders {
@@ -146,7 +134,7 @@ public actor JSONRPCSession {
 		do {
 			try self.decodeAndDispatch(data: data)
 		} catch {
-			errorContinuation.yield(error)
+			eventContinuation.yield(.error(error))
 		}
 	}
 
@@ -157,7 +145,7 @@ public actor JSONRPCSession {
 		case .notification(let method, let params):
 			let note = AnyJSONRPCNotification(method: method, params: params)
 
-			notificationContinuation.yield((note, data))
+			eventContinuation.yield(.notification(note, data))
 		case .response(let id):
 			let resp = AnyJSONRPCResponse(id: id, result: nil)
 
@@ -165,21 +153,19 @@ public actor JSONRPCSession {
 		case .request(let id, let method, let params):
 			let req = AnyJSONRPCRequest(id: id, method: method, params: params)
 
-			let handler: RequestHandler = { [weak self] in
+			let handler: JSONRPCEvent.RequestHandler = { [weak self] in
 				let resp = JSONRPCRequestReplyEncodableShim(id: id, result: $0)
 
-				Task { [weak self] in
-					do {
-						try await self?.encodeAndWrite(resp)
-					} catch {
-						self?.errorContinuation.yield(error)
-					}
+				do {
+					try await self?.encodeAndWrite(resp)
+				} catch {
+					self?.eventContinuation.yield(.error(error))
 				}
 			}
 
-			requestContinuation.yield((req, handler, data))
+			eventContinuation.yield(.request(req, handler, data))
 		case .undecodableId(let error):
-			errorContinuation.yield(error)
+			eventContinuation.yield(.error(error))
 		}
 	}
 
@@ -284,4 +270,3 @@ extension JSONRPCSession {
 		}
 	}
 }
-
