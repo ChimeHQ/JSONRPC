@@ -1,5 +1,6 @@
 import Foundation
 
+#if !os(Linux)
 extension DataChannel {
     /// A channel that facilitates communication over WebSockets.
     public static func webSocket(
@@ -42,3 +43,4 @@ extension DataChannel {
         return DataChannel(writeHandler: writeHandler, dataSequence: stream)
     }
 }
+#endif
