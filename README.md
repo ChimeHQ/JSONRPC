@@ -62,7 +62,7 @@ The closures on the `DataChannel` allow different transport mechanisms to be use
   - Usage: `let (clientChannel, serverChannel) = DataChannel.withDataActor()`
 - WebSocket channel
   - Uses `URLSessionWebSocketTask` as a message transport.
-  - Usage: `let chanell = DataChannel.webSocket(url: socketURL, terminationHandler: { print("socket closed" })`
+  - Usage: `let channel = DataChannel.webSocket(url: socketURL, terminationHandler: { print("socket closed" })`
 
 ## Contributing and Collaboration
 
