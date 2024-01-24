@@ -1,5 +1,4 @@
 [![Build Status][build status badge]][build status]
-[![License][license badge]][license]
 [![Platforms][platforms badge]][platforms]
 [![Documentation][documentation badge]][documentation]
 
