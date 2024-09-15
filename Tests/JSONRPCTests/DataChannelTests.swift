@@ -18,7 +18,7 @@ final class DataChannelTests: XCTestCase {
 		let msg = "hello"
 		await channel.send(msg.data(using: .utf8)!)
 		let receivedMsg = await receiveTask.result
-		XCTAssertEqual(msg, try receivedMsg.get())
+		XCTAssertEqual(msg, receivedMsg.get())
 
 		await channel.send(msg.data(using: .utf8)!)
 

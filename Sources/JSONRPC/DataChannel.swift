@@ -13,33 +13,3 @@ public struct DataChannel: Sendable {
 		self.dataSequence = dataSequence
 	}
 }
-
-extension DataChannel {
-	/// Create a passthrough `DataChannel` that invokes a closure on read and write.
-	public static func tap(
-		channel: DataChannel,
-		onRead: @Sendable @escaping (Data) async -> Void,
-		onWrite: @Sendable @escaping (Data) async -> Void
-	) -> DataChannel {
-
-		let writeHandler: DataChannel.WriteHandler = {
-			await onWrite($0)
-
-			try await channel.writeHandler($0)
-		}
-
-		var iterator = channel.dataSequence.makeAsyncIterator()
-		let dataStream = AsyncStream<Data> {
-			let data = await iterator.next()
-
-			if let data = data {
-				await onRead(data)
-			}
-
-			return data
-		}
-
-		return DataChannel(writeHandler: writeHandler,
-						   dataSequence: dataStream)
-	}
-}
