@@ -21,12 +21,23 @@ extension FileHandle {
 }
 
 extension DataChannel {
+	@available(*, deprecated, renamed: "stdio", message: "Use stdio instead")
 	public static func stdioPipe() -> DataChannel {
+		stdio()
+	}
 
-		let writeHandler: DataChannel.WriteHandler = {
-			FileHandle.standardOutput.write($0)
+	public static func stdio() -> DataChannel {
+
+		let writeHandler: DataChannel.WriteHandler = { data in
+			// Add a line break to flush the stdout buffer.
+			var data = data
+			data.append(contentsOf: lineBreak)
+
+			FileHandle.standardOutput.write(data)
 		}
 
 		return DataChannel(writeHandler: writeHandler, dataSequence: FileHandle.standardInput.dataStream)
 	}
+
+	private static let lineBreak = [UInt8(ascii: "\n")]
 }
