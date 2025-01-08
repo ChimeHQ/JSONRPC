@@ -70,4 +70,14 @@ final class JSONValueTests: XCTestCase {
 		]
 		XCTAssertEqual(value, expected)
 	}
+
+	func testDescriptions() throws {
+		XCTAssertEqual(JSONValue.null.description, "nil")
+		XCTAssertEqual(JSONValue.bool(true).description, "true")
+		XCTAssertEqual(JSONValue.bool(false).description, "false")
+		XCTAssertEqual(JSONValue.number(1.0).description, "1.0")
+		XCTAssertEqual(JSONValue.string("yo").description, "yo")
+		XCTAssertEqual(JSONValue.array([true, false]).description, "[true, false]")
+		XCTAssertEqual(JSONValue.hash(["a": false, "b": true]).description, "[\"a\": false, \"b\": true]")
+	}
 }

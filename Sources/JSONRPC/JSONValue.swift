@@ -117,3 +117,22 @@ extension JSONValue: ExpressibleByBooleanLiteral {
 		self = .bool(value)
 	}
 }
+
+extension JSONValue: CustomStringConvertible {
+	public var description: String {
+		switch self {
+		case .null:
+			"nil"
+		case let .bool(value):
+			value.description
+		case let .number(value):
+			value.description
+		case let .string(value):
+			value
+		case let .array(value):
+			value.description
+		case let .hash(value):
+			value.description
+		}
+	}
+}
