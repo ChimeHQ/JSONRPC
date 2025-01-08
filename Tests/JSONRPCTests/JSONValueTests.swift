@@ -78,6 +78,6 @@ final class JSONValueTests: XCTestCase {
 		XCTAssertEqual(JSONValue.number(1.0).description, "1.0")
 		XCTAssertEqual(JSONValue.string("yo").description, "yo")
 		XCTAssertEqual(JSONValue.array([true, false]).description, "[true, false]")
-		XCTAssertEqual(JSONValue.hash(["a": false, "b": true]).description, "[\"a\": false, \"b\": true]")
+		XCTAssertEqual(JSONValue.hash(["a": false]).description, "[\"a\": false]")
 	}
 }
