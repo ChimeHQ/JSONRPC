@@ -1,4 +1,9 @@
 import Foundation
+#if os(Linux)
+import Glibc
+#else
+import Darwin.C
+#endif
 
 extension FileHandle {
 	public var dataStream: AsyncStream<Data> {
@@ -26,18 +31,15 @@ extension DataChannel {
 		stdio()
 	}
 
-	public static func stdio() -> DataChannel {
+	public static func stdio(flushWrites: Bool = true) -> DataChannel {
 
 		let writeHandler: DataChannel.WriteHandler = { data in
-			// Add a line break to flush the stdout buffer.
-			var data = data
-			data.append(contentsOf: lineBreak)
-
 			FileHandle.standardOutput.write(data)
+			if flushWrites {
+				fflush(stdout)
+			}
 		}
 
 		return DataChannel(writeHandler: writeHandler, dataSequence: FileHandle.standardInput.dataStream)
 	}
-
-	private static let lineBreak = [UInt8(ascii: "\n")]
 }
