@@ -1,4 +1,9 @@
 import Foundation
+#if os(Linux)
+import Glibc
+#else
+import Darwin.C
+#endif
 
 extension FileHandle {
 	public var dataStream: AsyncStream<Data> {
@@ -21,10 +26,18 @@ extension FileHandle {
 }
 
 extension DataChannel {
+	@available(*, deprecated, renamed: "stdio", message: "Use stdio instead")
 	public static func stdioPipe() -> DataChannel {
+		stdio()
+	}
 
-		let writeHandler: DataChannel.WriteHandler = {
-			FileHandle.standardOutput.write($0)
+	public static func stdio(flushWrites: Bool = true) -> DataChannel {
+
+		let writeHandler: DataChannel.WriteHandler = { data in
+			FileHandle.standardOutput.write(data)
+			if flushWrites {
+				fflush(stdout)
+			}
 		}
 
 		return DataChannel(writeHandler: writeHandler, dataSequence: FileHandle.standardInput.dataStream)
