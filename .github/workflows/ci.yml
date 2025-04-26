@@ -48,7 +48,6 @@ jobs:
       - name: Swiftly
         uses: vapor/swiftly-action@v0.2.0
         with:
-          toolchain: 6.0.3
           toolchain: 6.1.0
       - name: Test
         run: swift test
