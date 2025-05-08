@@ -35,15 +35,17 @@ let params = "hello" // any Encodable
 let response: Decodable = try await session.sendRequest(params, method: "my_method")
 
 Task {
-    for await (request, handler, data) in session.requestSequence {
-        // inspect request, possibly re-decode with more specific type,
-        // and reply using the handler
-    }
-}
+    for await event in await session.eventSequence {
+        switch event {
+        case .request(let request, let handler, let data):
+            // inspect request, possibly re-decode with more specific type,
+            // and reply using the handler
 
-Task {
-    for await (notification, data) in session.notificationSequence {
-        // inspect notification
+        case .notification(let notification, let data):
+            // inspect notification
+        case .error(let error):
+            print("Error: \(error)")
+        }
     }
 }
 ```
